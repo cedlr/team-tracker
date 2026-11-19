@@ -1,19 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CalendarClock, Flag, Palmtree, Plane } from "lucide-react";
+import { Flag, Palmtree, Plane } from "lucide-react";
 import { MonthCalendar } from "@/components/arc/blocks/month-calendar/month-calendar";
 import type { CalendarEvent, CalendarPerson, CalendarSource } from "@/components/arc/blocks/month-calendar/month-calendar-data";
 import { createCalendarItem, deleteCalendarItem } from "@/app/actions/events";
 
 const calendars: CalendarSource[] = [
-  { id: "leave", name: "Approved leave", color: "var(--tone-green)", icon: Plane },
-  { id: "leave-pending", name: "Pending leave", color: "var(--tone-amber)", icon: CalendarClock },
+  { id: "leave", name: "Leave", color: "var(--tone-green)", icon: Plane },
   { id: "deadlines", name: "Task deadlines", color: "var(--tone-sky)", icon: Flag },
   { id: "holidays", name: "Holidays", color: "var(--tone-rose)", icon: Palmtree },
 ];
 
-/** Arc's month calendar showing the team's leave and task due dates. New events on "Approved leave" become leave requests. */
+/** Arc's month calendar showing the team's leave and task due dates. Leave is added from the Leave page; holidays and deadlines can be added here. */
 export function CalendarView({ events, people, userId, today }: { events: CalendarEvent[]; people: CalendarPerson[]; userId: string; today: string }) {
   const router = useRouter();
   return (

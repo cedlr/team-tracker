@@ -14,8 +14,8 @@ export default async function CalendarPage() {
   const [members, leaves, tasks, stored] = await Promise.all([listMembers(team.id), listLeaves(team.id), listTasks({ teamId: team.id }), listEvents(team.id)]);
   const name = new Map(members.map(m => [m.id, m.name]));
   const events = [
-    ...leaves.filter(l => l.status !== "declined").map(l => ({
-      id: l.id, title: `${name.get(l.memberId) ?? "Someone"}: ${leaveLabel[l.type]}`, calendarId: l.status === "approved" ? "leave" : "leave-pending",
+    ...leaves.map(l => ({
+      id: l.id, title: `${name.get(l.memberId) ?? "Someone"}: ${leaveLabel[l.type]}`, calendarId: "leave",
       start: l.from, end: l.to === l.from ? undefined : l.to, attendees: [{ id: l.memberId }], notes: l.note,
     })),
     ...tasks.filter(t => t.due && t.status !== "done").map(t => ({

@@ -35,6 +35,15 @@ Leave `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` empty to use the l
 
 `ARC_PRO_TOKEN` is only needed on machines that install or update Arc Pro items (`npx shadcn@latest add @uiarc-pro/<id>`); `components.json` reads it as `Bearer ${ARC_PRO_TOKEN}`. Never commit it.
 
+## Import from Multica
+
+`npm run import:multica -- <export-dir> --yes` replaces **all** data (Redis, or `./.data/kv.json` locally) with a Multica export: `members.json`, `projects.json`, `tasks.json` (default dir `./.data/multica/`, or `MULTICA_EXPORT_DIR`). Keep the export out of git; it is company data.
+
+- One team from the export (HLBInBranch, key `INB`). Members become users; Multica Owner/Admin become team admins, everyone else members. The seeded admin login (`admin@teamtracker.dev`) is kept with 0% allocation so it does not show in utilization.
+- Every member gets a random temporary password, written only to `<export-dir>/member-passwords.csv` (mode 600, or `--passwords <file>`). Share them privately and ask people to change them in Settings.
+- Status: Backlog → backlog, Todo → todo, In Progress → progress, In Review → review, Done → done, Cancelled → backlog with a `[Cancelled]` title prefix. Effort (Days) → estimate at 8 h/day. Labels, created date and non-member assignees (Multica agents) go into the description. Issues without a project go to a "General" project.
+- Multica has no leave, attendance or time logs, so none are imported. Without `--yes` it only prints what it would do. Against Upstash from far away it takes a while (one request per write).
+
 ## Teams
 
 Members belong to one or more teams (`memberships` with a capacity share per team). The team switcher is the workspace switcher in Arc's screen shell. The chosen team is stored in the `tt-team` cookie; `/any-page?team=<id>` also switches it. Projects, tasks, leave, attendance and utilization are scoped to the selected team.
@@ -51,7 +60,7 @@ Members belong to one or more teams (`memberships` with a capacity share per tea
 | hash `att:{memberId}:{yyyy-mm}` | day → { status, teamId, at }: one HSET per check-in |
 | hash `time:{memberId}:{yyyy-mm-dd}` | taskId → { hours, teamId } |
 
-Utilization = hours logged on the team's tasks ÷ (capacity share for the team − approved leave on working days) (`src/lib/utilization.ts`).
+Utilization = hours logged on the team's tasks ÷ (capacity share for the team − leave on working days) (`src/lib/utilization.ts`).
 
 ## Routes
 
@@ -66,7 +75,7 @@ Utilization = hours logged on the team's tasks ÷ (capacity share for the team �
 | `/timeline` | `gantt-timeline` (real members; drag to reschedule saves dates) |
 | `/calendar` | `month-calendar` (leave, task deadlines, holidays; create and delete persist) |
 | `/people` | `team-directory` (real members, Kuala Lumpur clocks, today's date) |
-| `/leave` | `team-directory` time off page (approve/decline) + `dialog`, `date-range-picker`, `select`, `textarea` request form |
+| `/leave` | `team-directory` leave page (records only; approvals happen by email) + `dialog`, `date-range-picker`, `select`, `textarea` "Add leave" form for leads/admins |
 | `/utilization` | `bar-chart`, `sortable-data-table`, `usage-meter`, `segmented-control`, plus an hours log on a task |
 | `/settings` | `profile-page` (edit saves), password change, rename/add team, `roles-permissions` (roles save), `invite-people` (new member + temporary password) |
 
@@ -74,9 +83,9 @@ Alignment edits to Arc source are marked `team-tracker:` (login-split props, scr
 
 ## Server Actions (`src/app/actions`)
 
-`checkIn`, `checkOut`, `upsertTask`, `moveTasks`, `logHours`, `requestLeave`, `decideLeave`, `cancelLeave`, `createCalendarItem`, `deleteCalendarItem`, `updateProfile`, `changePassword`, `inviteMember`, `setMemberRole`, `renameTeam`, `createTeam`, `saveRoleGrants`, `selectTeam`, `loginWithPassword`, `logout`.
+`checkIn`, `checkOut`, `upsertTask`, `moveTasks`, `logHours`, `addLeave`, `deleteLeave`, `createCalendarItem`, `deleteCalendarItem`, `updateProfile`, `changePassword`, `inviteMember`, `setMemberRole`, `renameTeam`, `createTeam`, `saveRoleGrants`, `selectTeam`, `loginWithPassword`, `logout`.
 
-Leads and admins approve leave, invite people, change roles and manage teams. Members can update their own profile and password, log time, check in and out, and request leave.
+Leave is approved by email outside the app. Leads and admins record approved leave, invite people, change roles and manage teams. Members can update their own profile and password, log time, and check in and out.
 
 Dates and "today" use `Asia/Kuala_Lumpur` (`src/lib/time.ts`).
 

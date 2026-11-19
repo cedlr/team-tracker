@@ -94,26 +94,18 @@ test("team tracker round-trips on the local store", async ({ page }) => {
     await expect(page.getByRole("button", { name: /Checked out/ })).toBeVisible();
   });
 
-  await test.step("request and approve leave", async () => {
+  await test.step("add an email-approved leave record", async () => {
     await page.goto("/leave");
-    await page.getByRole("button", { name: "Approve" }).first().click();
-    await page.waitForTimeout(800);
-    await page.reload();
     await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Request leave" }).click();
+    await page.getByRole("button", { name: "Add leave" }).click();
     await page.getByRole("button", { name: /^Dates/ }).click();
     await page.getByRole("button", { name: /November 23, 2026/ }).click();
     await page.getByRole("button", { name: /November 24, 2026/ }).click();
     await page.getByRole("button", { name: "Apply" }).click();
-    await page.getByRole("button", { name: "Send request" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Add leave" }).click();
     await page.waitForTimeout(800);
     await page.reload();
-    await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
-    await page.getByRole("button", { name: "Approve" }).click();
-    await page.waitForTimeout(800);
-    await page.reload();
-    await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+    await expect(page.getByText("Upcoming leave")).toBeVisible();
   });
 
   await test.step("calendar holiday and deadline persist", async () => {

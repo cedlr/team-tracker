@@ -43,7 +43,6 @@ export interface TimeOffRequest {
   from: string;
   to: string;
   days: number;
-  status: "pending" | "approved";
   note?: string;
 }
 
@@ -166,11 +165,11 @@ export const directoryPeople: DirectoryPerson[] = [
 ];
 
 export const directoryTimeOff: TimeOffRequest[] = [
-  { id: "t1", personId: "daniel-kim", kind: "Vacation", from: "2026-11-30", to: "2026-12-04", days: 5, status: "pending", note: "Skiing in Laax. The billing migration ships the week before." },
-  { id: "t2", personId: "ryan-sullivan", kind: "Personal day", from: "2026-11-13", to: "2026-11-13", days: 1, status: "pending" },
-  { id: "t3", personId: "olivia-bennett", kind: "Vacation", from: "2026-11-10", to: "2026-11-16", days: 5, status: "approved" },
-  { id: "t4", personId: "emma-collins", kind: "Vacation", from: "2026-11-23", to: "2026-11-27", days: 5, status: "approved" },
-  { id: "t5", personId: "chloe-nguyen", kind: "Sick leave", from: "2026-11-05", to: "2026-11-06", days: 2, status: "approved" },
-  { id: "t6", personId: "marcus-johnson", kind: "Vacation", from: "2026-12-21", to: "2027-01-01", days: 8, status: "approved" },
-  { id: "t7", personId: "ava-mitchell", kind: "Parental leave", from: "2027-02-01", to: "2027-04-30", days: 64, status: "approved" },
+  { id: "t1", personId: "daniel-kim", kind: "Vacation", from: "2026-11-30", to: "2026-12-04", days: 5, note: "Skiing in Laax. The billing migration ships the week before." },
+  { id: "t2", personId: "ryan-sullivan", kind: "Personal day", from: "2026-11-13", to: "2026-11-13", days: 1 },
+  { id: "t3", personId: "olivia-bennett", kind: "Vacation", from: "2026-11-10", to: "2026-11-16", days: 5 },
+  { id: "t4", personId: "emma-collins", kind: "Vacation", from: "2026-11-23", to: "2026-11-27", days: 5 },
+  { id: "t5", personId: "chloe-nguyen", kind: "Sick leave", from: "2026-11-05", to: "2026-11-06", days: 2 },
+  { id: "t6", personId: "marcus-johnson", kind: "Vacation", from: "2026-12-21", to: "2027-01-01", days: 8 },
+  { id: "t7", personId: "ava-mitchell", kind: "Parental leave", from: "2027-02-01", to: "2027-04-30", days: 64 },
 ];

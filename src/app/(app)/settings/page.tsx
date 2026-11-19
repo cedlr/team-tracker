@@ -33,7 +33,7 @@ export default async function SettingsPage() {
       { id: "open", label: "Open tasks", value: tasks.filter(t => t.assigneeId === member.id && t.status !== "done").length },
       { id: "done", label: "Tasks done", value: tasks.filter(t => t.assigneeId === member.id && t.status === "done").length },
       { id: "present", label: "Days in this month", value: Object.values(attendance).filter(d => d.status === "present" || d.status === "remote").length },
-      { id: "leave", label: "Leave days taken", value: leaves.filter(l => l.memberId === member.id && l.status === "approved").reduce((s, l) => s + l.days, 0) },
+      { id: "leave", label: "Leave days taken", value: leaves.filter(l => l.memberId === member.id).reduce((s, l) => s + l.days, 0) },
     ]}
     projects={projects.filter(p => p.memberIds.includes(member.id)).map((p, i) => ({
       id: p.id, name: p.name, description: `${tasks.filter(t => t.projectId === p.id && t.status !== "done").length} open tasks`,

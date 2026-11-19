@@ -67,13 +67,13 @@ async function main() {
   }
 
   const leaves = [
-    { id: "leave-1", teamId: "web", memberId: "olivia", type: "annual" as const, from: iso(subDays(today, 9)), to: iso(subDays(today, 7)), status: "approved" as const },
-    { id: "leave-2", teamId: "mobile", memberId: "chloe", type: "sick" as const, from: iso(subDays(today, 3)), to: iso(subDays(today, 3)), status: "approved" as const },
-    { id: "leave-3", teamId: "web", memberId: "daniel", type: "annual" as const, from: iso(addDays(today, 12)), to: iso(addDays(today, 16)), status: "pending" as const },
-    { id: "leave-4", teamId: "mobile", memberId: "jasmine", type: "personal" as const, from: iso(addDays(today, 5)), to: iso(addDays(today, 5)), status: "pending" as const },
+    { id: "leave-1", teamId: "web", memberId: "olivia", type: "annual" as const, from: iso(subDays(today, 9)), to: iso(subDays(today, 7)) },
+    { id: "leave-2", teamId: "mobile", memberId: "chloe", type: "sick" as const, from: iso(subDays(today, 3)), to: iso(subDays(today, 3)) },
+    { id: "leave-3", teamId: "web", memberId: "daniel", type: "annual" as const, from: iso(addDays(today, 12)), to: iso(addDays(today, 16)) },
+    { id: "leave-4", teamId: "mobile", memberId: "jasmine", type: "personal" as const, from: iso(addDays(today, 5)), to: iso(addDays(today, 5)) },
   ];
   const workdays = (from: string, to: string) => { const out: string[] = []; for (let d = new Date(from); iso(d) <= to; d = addDays(d, 1)) if (!isWeekend(d)) out.push(iso(d)); return out; };
-  for (const leave of leaves) await saveLeave({ ...leave, days: workdays(leave.from, leave.to).length, createdAt: new Date().toISOString(), decidedBy: leave.status === "approved" ? "cedrick" : undefined });
+  for (const leave of leaves) await saveLeave({ ...leave, days: workdays(leave.from, leave.to).length, createdAt: new Date().toISOString(), addedBy: "cedrick" });
 
   // Attendance and time logs for the last 30 days (weekdays, excluding today so the check-in button is live).
   for (const person of people) {
@@ -82,7 +82,7 @@ async function main() {
       const day = subDays(today, back);
       if (isWeekend(day)) continue;
       const date = iso(day);
-      const onLeave = leaves.find(l => l.memberId === person.id && l.status === "approved" && date >= l.from && date <= l.to);
+      const onLeave = leaves.find(l => l.memberId === person.id && date >= l.from && date <= l.to);
       const teamId = person.memberships[0].teamId;
       if (onLeave) { await setAttendanceDay(person.id, date, { status: "leave", teamId, at: `${date}T09:00:00.000Z` }); continue; }
       const roll = rand();

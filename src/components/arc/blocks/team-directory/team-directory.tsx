@@ -33,7 +33,7 @@ export interface TeamDirectoryProps {
   onPersonSelect?: (person: { id: string; name: string; team: Team }) => void;
   /** The people in the directory. Defaults to the 16 person sample studio. */
   people?: DirectoryPerson[];
-  /** Time off requests: pending ones wait on the Time off page, approved ones mark people out. */
+  /** Leave records (approved by email). They mark people out and show on the Leave page. */
   timeOff?: TimeOffRequest[];
   /** The person viewing the directory: working hour overlap is measured against them and they appear in the account menu. */
   viewerId?: string;
@@ -51,8 +51,6 @@ export interface TeamDirectoryProps {
   onInvite?: (invite: { email: string; team: Team }) => void;
   /** Called when someone's manager changes, by dragging in the org chart or from the profile. */
   onManagerChange?: (personId: string, managerId: string) => void;
-  /** Called when a time off request is approved or declined. */
-  onTimeOffDecision?: (requestId: string, decision: "approve" | "decline") => void;
   /** team-tracker: epoch ms for clocks and the time-off strip. Defaults to the sample studio's fixed moment. */
   now?: number;
   /** team-tracker: time zone used to place "today" on the time-off strip. */
@@ -95,7 +93,7 @@ function ShellBridge({ apiRef }: { apiRef: MutableRefObject<ShellApi | null> }) 
  */
 export function TeamDirectory({
   onPersonSelect, people: peopleProp = directoryPeople, timeOff: timeOffProp = directoryTimeOff, viewerId = defaultViewerId, workspaceName = "Saltmarsh",
-  defaultView = "grid", defaultPage = "people", defaultSelectedId = "marcus-johnson", defaultProfileOpen = false, onInvite, onManagerChange, onTimeOffDecision,
+  defaultView = "grid", defaultPage = "people", defaultSelectedId = "marcus-johnson", defaultProfileOpen = false, onInvite, onManagerChange,
   now = directoryNow, timeZone = "UTC", offices = sampleOffices, className,
 }: TeamDirectoryProps) {
   const uid = useId();
@@ -104,7 +102,7 @@ export function TeamDirectory({
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [people, setPeople] = useState(peopleProp);
-  const [requests, setRequests] = useState(timeOffProp);
+  const requests = timeOffProp;
   const [navActive, setNavActive] = useState<string>(defaultPage);
   const [selectedId, setSelectedId] = useState(() => peopleProp.some(person => person.id === defaultSelectedId) ? defaultSelectedId : peopleProp[0]?.id ?? "");
   const [favorites, setFavorites] = useState<Set<string>>(() => new Set(["nathan-cole", "jasmine-brooks"].filter(id => peopleProp.some(person => person.id === id))));
@@ -170,16 +168,6 @@ export function TeamDirectory({
     notify(`${person.name.split(" ")[0]} now reports to ${manager.name.split(" ")[0]}`, () => setPeople(before));
   }, [people, onManagerChange, notify]);
 
-  const decide = useCallback((id: string, decision: "approve" | "decline") => {
-    const before = requests;
-    const request = requests.find(entry => entry.id === id);
-    const person = people.find(entry => entry.id === request?.personId);
-    if (!request || !person) return;
-    setRequests(list => decision === "approve" ? list.map(entry => entry.id === id ? { ...entry, status: "approved" } : entry) : list.filter(entry => entry.id !== id));
-    onTimeOffDecision?.(id, decision);
-    notify(`${decision === "approve" ? "Approved" : "Declined"} ${person.name.split(" ")[0]}'s ${request.kind.toLowerCase()}`, () => setRequests(before));
-  }, [requests, people, onTimeOffDecision, notify]);
-
   const toggleFavorite = useCallback((id: string) => {
     setFavorites(current => {
       const next = new Set(current);
@@ -213,7 +201,7 @@ export function TeamDirectory({
   const filtersOn = Boolean(needle) || office !== "all" || teamFilter !== "all" || statusFilter !== "any";
   const clearFilters = () => { setQuery(""); setOffice("all"); setTeamFilter("all"); setStatusFilter("any"); };
   const managerName = useCallback((id?: string) => people.find(person => person.id === id)?.name ?? "No one", [people]);
-  const pendingCount = requests.filter(request => request.status === "pending").length;
+  const upcomingLeave = requests.filter(request => request.to >= new Date(now).toISOString().slice(0, 10)).length;
 
   /* ⌘K in the sidebar and / anywhere both land in the people search, on the People page. */
   const focusSearch = useCallback(() => {
@@ -231,7 +219,7 @@ export function TeamDirectory({
   const nav = [
     { id: "people", label: "People", icon: Users, count: people.length },
     { id: "org", label: "Org chart", icon: Network },
-    { id: "timeoff", label: "Time off", icon: CalendarDays, count: pendingCount || undefined },
+    { id: "timeoff", label: "Leave", icon: CalendarDays },
   ];
   const sections: ScreenShellSection[] = [
     { id: "offices", label: "Offices", icon: Clock3, items: [], content: <OfficeClocks people={people} offices={offices} now={now} statusFor={statusFor} active={page === "people" ? office : "all"} onPick={pickOffice} /> },
@@ -252,8 +240,8 @@ export function TeamDirectory({
     setNavActive(id);
   };
 
-  const title = page === "org" ? "Org chart" : page === "timeoff" ? "Time off" : "People";
-  const meta = page === "org" ? `${teams.length} teams, ${people.length} people` : page === "timeoff" ? (pendingCount ? `${pendingCount} waiting for you` : "All caught up")
+  const title = page === "org" ? "Org chart" : page === "timeoff" ? "Leave" : "People";
+  const meta = page === "org" ? `${teams.length} teams, ${people.length} people` : page === "timeoff" ? (upcomingLeave ? `${upcomingLeave} upcoming` : "No upcoming leave")
     : filtersOn ? `${filtered.length} of ${people.length}` : `${people.length} people in ${offices.length} offices`;
   const teamOptions = [{ value: "all" as const, label: "All teams", icon: <Users size={16} strokeWidth={1.75} />, hint: String(people.length) },
     ...teams.map(team => ({ value: team.id, label: team.id, icon: <TeamIcon team={team.id} />, hint: String(people.filter(person => person.team === team.id).length) }))];
@@ -373,7 +361,7 @@ export function TeamDirectory({
       </div>}
 
       {page === "org" && <OrgChart people={people} selectedId={selected.id} showSelection={panelOpen} onSelect={select} onOpen={openPanel} onManagerChange={changeManager} />}
-      {page === "timeoff" && <TimeOffPage requests={requests} people={people} onDecide={decide} onSelect={select} onOpen={openPanel} />}
+      {page === "timeoff" && <TimeOffPage requests={requests} people={people} onSelect={select} onOpen={openPanel} />}
       </div>
     </ScreenShell>
   </div></DirectoryClockProvider>;

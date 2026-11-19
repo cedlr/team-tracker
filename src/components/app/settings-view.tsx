@@ -15,9 +15,9 @@ import { selectTeam } from "@/app/actions/team";
 import { AppScreen } from "./app-screen";
 
 const inviteRoles: { value: Role; label: string; description: string }[] = [
-  { value: "admin", label: "Admin", description: "Manages the team, members and leave" },
-  { value: "lead", label: "Lead", description: "Approves leave and manages members" },
-  { value: "member", label: "Member", description: "Works on tasks and requests leave" },
+  { value: "admin", label: "Admin", description: "Manages the team, members and leave records" },
+  { value: "lead", label: "Lead", description: "Records leave and manages members" },
+  { value: "member", label: "Member", description: "Works on tasks and checks in daily" },
 ];
 
 export function SettingsView({

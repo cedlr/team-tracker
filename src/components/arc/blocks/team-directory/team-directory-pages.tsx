@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { CSSProperties, DragEvent as ReactDragEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowDown, ArrowUp, Check, MessageSquare, Plane, Send, Star, Users, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, MessageSquare, Plane, Send, Star, Users } from "lucide-react";
 import { motionTokens } from "../../lib/motion-tokens";
 import { Badge } from "../../badge/badge";
 import { Button } from "../../button/button";
@@ -214,46 +214,21 @@ export function OrgChart({ people, selectedId, showSelection, onSelect, onOpen, 
 
 const WINDOW_DAYS = 28;
 
-export function TimeOffPage({ requests, people, onDecide, onSelect, onOpen }: {
-  requests: TimeOffRequest[]; people: DirectoryPerson[]; onDecide: (id: string, decision: "approve" | "decline") => void;
+export function TimeOffPage({ requests, people, onSelect, onOpen }: {
+  requests: TimeOffRequest[]; people: DirectoryPerson[];
   onSelect: (id: string) => void; onOpen: (id: string) => void;
 }) {
-  const reduce = useReducedMotion();
   const { now, timeZone } = useDirectoryClock();
   const TODAY = calendarDay(now, timeZone);
   const WINDOW_START = TODAY - ((new Date(TODAY * 86400000).getUTCDay() + 6) % 7);
   const byId = (id: string) => people.find(person => person.id === id)!;
-  const pending = requests.filter(request => request.status === "pending");
-  const upcoming = requests.filter(request => request.status === "approved" && dayIndex(request.to) >= TODAY).sort((a, b) => dayIndex(a.from) - dayIndex(b.from));
+  const upcoming = requests.filter(request => dayIndex(request.to) >= TODAY).sort((a, b) => dayIndex(a.from) - dayIndex(b.from));
   const inWindow = requests.filter(request => dayIndex(request.to) >= WINDOW_START && dayIndex(request.from) < WINDOW_START + WINDOW_DAYS)
     .sort((a, b) => dayIndex(a.from) - dayIndex(b.from));
   const scrollRef = useEdgeFade<HTMLDivElement>("x");
   const openPerson = (id: string) => { onSelect(id); onOpen(id); };
 
   return <div className={styles.timeoff}>
-    <section className={styles.block} aria-labelledby="td-pending">
-      <h3 className={styles.blockHead} id="td-pending">Waiting for you<span className={styles.groupCount}>{pending.length}</span></h3>
-      {pending.length === 0 ? <p className={styles.emptyLine}>You are all caught up. New requests land here.</p> : <ul className={styles.requests}>
-        <AnimatePresence initial={false}>
-          {pending.map(request => {
-            const person = byId(request.personId);
-            return <motion.li key={request.id} className={styles.request} layout={reduce ? false : "position"}
-              exit={{ opacity: 0, transition: reduce ? instant : { duration: motionTokens.duration.exit } }} transition={reduce ? instant : motionTokens.spring.smooth}>
-              <button type="button" className={styles.requestWho} onClick={() => openPerson(person.id)}>
-                <Face person={person} size={36} />
-                <span className={styles.rowText}><span className={styles.rowName}>{person.name}</span><span className={styles.rowRole}>{request.kind}, {dateRange(request.from, request.to)}, {request.days} {request.days === 1 ? "day" : "days"}</span></span>
-              </button>
-              {request.note && <p className={styles.requestNote}>{request.note}</p>}
-              <span className={styles.requestActions}>
-                <Button variant="secondary" size="sm" className={styles.btn} onClick={() => onDecide(request.id, "decline")}><X size={16} strokeWidth={1.75} aria-hidden="true" />Decline</Button>
-                <Button variant="primary" size="sm" className={styles.btn} onClick={() => onDecide(request.id, "approve")}><Check size={16} strokeWidth={1.75} aria-hidden="true" />Approve</Button>
-              </span>
-            </motion.li>;
-          })}
-        </AnimatePresence>
-      </ul>}
-    </section>
-
     <section className={styles.block} aria-labelledby="td-calendar">
       <h3 className={styles.blockHead} id="td-calendar">Next four weeks</h3>
       <div ref={scrollRef} className={styles.calScroll}>
@@ -278,8 +253,8 @@ export function TimeOffPage({ requests, people, onDecide, onSelect, onOpen }: {
                 const date = new Date((WINDOW_START + day) * 86400000);
                 return <span key={day} className={styles.calCell} style={{ gridColumn: day + 2 }} data-weekend={date.getUTCDay() === 0 || date.getUTCDay() === 6 ? "" : undefined} data-today={WINDOW_START + day === TODAY ? "" : undefined} aria-hidden="true" />;
               })}
-              <span className={styles.calBar} title={`${person.name}, ${request.kind.toLowerCase()}, ${dateRange(request.from, request.to)}${request.status === "pending" ? ", pending" : ""}`} data-pending={request.status === "pending" ? "" : undefined} style={{ gridColumn: `${from + 2} / ${to + 3}`, "--td-tone": toneVar(toneOf(person.team)) } as CSSProperties}>
-                <span>{request.kind}{request.status === "pending" ? ", pending" : ""}</span>
+              <span className={styles.calBar} title={`${person.name}, ${request.kind.toLowerCase()}, ${dateRange(request.from, request.to)}`} style={{ gridColumn: `${from + 2} / ${to + 3}`, "--td-tone": toneVar(toneOf(person.team)) } as CSSProperties}>
+                <span>{request.kind}</span>
               </span>
             </div>;
           })}
@@ -288,8 +263,8 @@ export function TimeOffPage({ requests, people, onDecide, onSelect, onOpen }: {
     </section>
 
     <section className={styles.block} aria-labelledby="td-upcoming">
-      <h3 className={styles.blockHead} id="td-upcoming">Approved<span className={styles.groupCount}>{upcoming.length}</span></h3>
-      <ul className={styles.upcoming}>
+      <h3 className={styles.blockHead} id="td-upcoming">Upcoming leave<span className={styles.groupCount}>{upcoming.length}</span></h3>
+      {upcoming.length === 0 ? <p className={styles.emptyLine}>No one has leave coming up.</p> : <ul className={styles.upcoming}>
         {upcoming.map(request => {
           const person = byId(request.personId);
           const now = dayIndex(request.from) <= TODAY;
@@ -301,7 +276,7 @@ export function TimeOffPage({ requests, people, onDecide, onSelect, onOpen }: {
             </button>
           </li>;
         })}
-      </ul>
+      </ul>}
     </section>
   </div>;
 }
@@ -339,7 +314,7 @@ function Profile({ person, people, viewer, viewerAway, favorite, timeOff, onTogg
   const descendants = (id: string): string[] => people.filter(p => p.managerId === id).flatMap(child => [child.id, ...descendants(child.id)]);
   const blocked = new Set([person.id, ...descendants(person.id)]);
   const managerOptions = people.filter(entry => !blocked.has(entry.id)).map(entry => ({ value: entry.id, label: entry.name, detail: entry.role, photo: entry.photo }));
-  const away = timeOff.filter(request => request.personId === person.id && request.status === "approved" && dayIndex(request.to) >= today);
+  const away = timeOff.filter(request => request.personId === person.id && dayIndex(request.to) >= today);
   const first = person.name.split(" ")[0];
 
   const send = () => {

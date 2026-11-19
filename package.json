@@ -10,7 +10,8 @@
     "seed": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/seed.ts",
     "typecheck": "tsc --noEmit",
     "redis:check": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/redis-check.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "import:multica": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/import-multica.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.4.1",

@@ -53,19 +53,18 @@ export function teamActivity({ today, teamId, teamName, members, projects, tasks
     if (Number.isNaN(at)) continue;
     const day = dayOffset(today, new Date(at));
     if (day < 0 || day > 30) continue;
-    const verb = leave.status === "approved" ? "had approved" : leave.status === "declined" ? "had declined" : "requested";
     rows.push({
       at,
       item: {
         id: `leave-${leave.id}`,
         type: "comment",
         actor: actor(leave.memberId),
-        action: verb,
+        action: "is on",
         target: leaveLabel[leave.type],
         project: "Leave",
         day,
         time: zonedClock(new Date(at)),
-        unread: leave.status === "pending",
+        unread: false,
         detail: { kind: "comment", text: `${leave.from} to ${leave.to}${leave.note ? `. ${leave.note}` : ""}` },
       },
     });

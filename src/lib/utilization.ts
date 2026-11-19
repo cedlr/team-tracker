@@ -17,7 +17,7 @@ export const workdays = (from: string, to: string) =>
 
 /**
  * Utilization for one team over [from, to]: hours logged on the team's tasks divided by
- * (capacity given to the team minus approved leave on working days).
+ * (capacity given to the team minus leave on working days).
  */
 export function utilizationFor(
   members: PublicMember[], teamId: string, from: string, to: string,
@@ -30,7 +30,7 @@ export function utilizationFor(
     const capacityHours = dailyHours * days.length;
     const leaveDays = new Set<string>();
     for (const leave of leaves) {
-      if (leave.memberId !== member.id || leave.status !== "approved") continue;
+      if (leave.memberId !== member.id) continue;
       for (const day of days) if (day >= leave.from && day <= leave.to) leaveDays.add(day);
     }
     const leaveHours = leaveDays.size * dailyHours;

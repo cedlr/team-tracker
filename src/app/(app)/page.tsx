@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   const util = utilizationFor(members, team.id, from14, today, leaves, logs);
   const available = util.reduce((sum, u) => sum + u.availableHours, 0);
   const logged = util.reduce((sum, u) => sum + u.loggedHours, 0);
-  const pendingLeave = leaves.filter(l => l.status === "pending").length;
+  const onLeaveToday = new Set(leaves.filter(l => today >= l.from && today <= l.to).map(l => l.memberId)).size;
 
   const hours = workdays(from14, today).map(date => ({
     key: date,
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       { label: "Open tasks", value: open, context: `${overdue} overdue`, change: `${doneThisWeek} done this week` },
       { label: "Checked in today", value: checkedIn, suffix: ` / ${members.length}`, context: "Team members" },
       { label: "Utilization", value: available ? Math.round((logged / available) * 100) : 0, suffix: "%", context: "Last 14 days, after leave" },
-      { label: "Pending leave", value: pendingLeave, context: "Requests waiting for a lead" },
+      { label: "On leave today", value: onLeaveToday, suffix: ` / ${members.length}`, context: "Team members" },
     ],
     hours,
     hoursPeriod: `${format(subDays(now, 13), "MMM d")} – ${format(now, "MMM d, yyyy")}`,

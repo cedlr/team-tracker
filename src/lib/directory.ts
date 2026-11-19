@@ -16,7 +16,7 @@ export function officesFor(people: DirectoryPerson[]) {
 }
 export function toDirectoryPeople(members: PublicMember[], leaves: Leave[], today: string): DirectoryPerson[] {
   return members.map(m => {
-    const out = leaves.find(l => l.memberId === m.id && l.status === "approved" && today >= l.from && today <= l.to);
+    const out = leaves.find(l => l.memberId === m.id && today >= l.from && today <= l.to);
     return {
       id: m.id, name: m.name, role: m.title || "Team member", team: m.department, office: "Kuala Lumpur", city: "Kuala Lumpur",
       utcOffset: 8, hours: [9, 18], managerId: m.managerId, email: m.email, started: m.started,
@@ -27,8 +27,5 @@ export function toDirectoryPeople(members: PublicMember[], leaves: Leave[], toda
 }
 
 export function toTimeOff(leaves: Leave[]): TimeOffRequest[] {
-  return leaves.filter(l => l.status !== "declined").map(l => ({
-    id: l.id, personId: l.memberId, kind: kind[l.type], from: l.from, to: l.to, days: l.days,
-    status: l.status === "approved" ? "approved" : "pending", note: l.note,
-  }));
+  return leaves.map(l => ({ id: l.id, personId: l.memberId, kind: kind[l.type], from: l.from, to: l.to, days: l.days, note: l.note }));
 }

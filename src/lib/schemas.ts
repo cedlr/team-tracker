@@ -82,9 +82,9 @@ export const leaveSchema = z.object({
   from: isoDate,
   to: isoDate,
   days: z.number().min(0.5).max(365),
-  status: z.enum(["pending", "approved", "declined"]).default("pending"),
   note: z.string().max(500).optional(),
-  decidedBy: z.string().optional(),
+  /** Who recorded it. Leave is approved by email; this app only keeps the record. */
+  addedBy: z.string().optional(),
   createdAt: z.string(),
 });
 
@@ -131,13 +131,13 @@ export const taskInput = z.object({
   due: isoDate.nullable().optional(),
   order: z.number().optional(),
 });
-export const leaveRequestInput = z.object({
+export const leaveEntryInput = z.object({
+  memberId: z.string().min(1),
   type: leaveTypeSchema,
   from: isoDate,
   to: isoDate,
   note: z.string().max(500).optional(),
 }).refine(value => value.from <= value.to, { message: "The end date is before the start date", path: ["to"] });
-export const leaveDecisionInput = z.object({ id: z.string(), decision: z.enum(["approve", "decline"]) });
 
 export const calendarKindSchema = z.enum(["holiday", "deadline", "focus"]);
 export const calendarEventSchema = z.object({
