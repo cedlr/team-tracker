@@ -1,0 +1,10 @@
+/* Arc's foundation.css owns colour, type and spacing tokens. This file only resets the page frame. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--background); color: var(--foreground); font-family: var(--font-inter), system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+/* Glue layout for pages that compose several Arc items inside the screen shell. */
+.tt-screen { height: 100dvh; }
+.tt-stack { display: grid; gap: var(--space-6, 24px); }
+.tt-grid { display: grid; gap: var(--space-4, 16px); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.tt-row { display: flex; flex-wrap: wrap; gap: var(--space-3, 12px); align-items: center; }
