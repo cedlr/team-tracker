@@ -51,7 +51,7 @@ export function LeaveView({ rows, today, teamName, canEdit }: { rows: Row[]; tod
           <MetricCard label={`Days in ${year}`} value={rows.filter(r => r.from.startsWith(year)).reduce((s, r) => s + r.days, 0)} suffix="d" context="Working days, whole team" />
         </section>
         {shown.length ? (
-          <section className="tt-panel">
+          <section className="tt-section">
             <SortableDataTable rows={shown} columns={columns} rowKey="id" caption={`Leave in ${teamName}`} itemName={{ one: "leave record", other: "leave records" }} />
           </section>
         ) : (

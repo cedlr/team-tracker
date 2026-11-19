@@ -41,3 +41,4 @@ body { background: var(--background); color: var(--foreground); font-family: var
 .tt-clip { display: block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tt-split-even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 760px) { .tt-split-even { grid-template-columns: 1fr; } }
+.tt-section { min-width: 0; }

@@ -44,6 +44,12 @@ Leave `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` empty to use the l
 - Status: Backlog → backlog, Todo → todo, In Progress → progress, In Review → review, Done → done, Cancelled → backlog with a `[Cancelled]` title prefix. Effort (Days) → estimate at 8 h/day. Labels, created date and non-member assignees (Multica agents) go into the description. Issues without a project go to a "General" project.
 - Multica has no leave, attendance or time logs, so none are imported. Without `--yes` it only prints what it would do. Against Upstash from far away it takes a while (one request per write).
 
+## Demo activity
+
+`npm run seed:activity -- --yes` adds realistic time logs, check-ins/outs and a few email-approved leave records for the last 6 weeks of working days (`--weeks n`), on top of the real team, without touching members, projects or tasks. Hours go on tasks assigned to each person (in progress, review, done first) and respect estimates loosely; utilization lands between about 55% and 105%. Every seeded record is tracked in the `seed:activity` set and tagged `source: "seed"`; `npm run seed:activity -- --reset` removes only those. Without `--yes` it is a dry run.
+
+Utilization capacity starts on each person's start date, so new joiners are not measured against weeks before they joined.
+
 ## Teams
 
 Members belong to one or more teams (`memberships` with a capacity share per team). The team switcher is the workspace switcher in Arc's screen shell. The chosen team is stored in the `tt-team` cookie; `/any-page?team=<id>` also switches it. Projects, tasks, leave, attendance and utilization are scoped to the selected team.

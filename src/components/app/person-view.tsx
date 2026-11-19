@@ -63,7 +63,7 @@ export function PersonView({ person, tasks, leave, teamName }: { person: PersonW
 
         <section className="tt-split tt-split-even">
           <div className="tt-panel tt-panel-center">
-            <Gauge value={person.utilization} max={120} label="Utilization this month" detail={`${person.logged}h of ${person.available}h`}
+            <Gauge value={person.utilization} max={100} label="Utilization this month" detail={`${person.logged}h of ${person.available}h`}
               thresholds={[{ from: 0, tone: "warning", label: "Low" }, { from: 70, tone: "success", label: "Healthy" }, { from: 100, tone: "danger", label: "Over capacity" }]} />
           </div>
           <div className="tt-panel">
@@ -74,13 +74,13 @@ export function PersonView({ person, tasks, leave, teamName }: { person: PersonW
           </div>
         </section>
 
-        <section className="tt-panel">
+        <section className="tt-section">
           <h2 className="tt-section-title">Current tasks</h2>
           {tasks.length ? <SortableDataTable rows={tasks} columns={taskColumns} rowKey="id" caption={`Open tasks for ${person.name}`} itemName={{ one: "task", other: "tasks" }} />
             : <EmptyState icon={<ListTodo size={20} strokeWidth={1.75} aria-hidden="true" />} title="No open tasks" description="Nothing is assigned right now." />}
         </section>
 
-        <section className="tt-panel">
+        <section className="tt-section">
           <h2 className="tt-section-title">Upcoming leave</h2>
           {leave.length ? <SortableDataTable rows={leave} columns={leaveColumns} rowKey="id" caption={`Upcoming leave for ${person.name}`} itemName={{ one: "leave", other: "leave" }} />
             : <p className="tt-note">No upcoming leave recorded.</p>}

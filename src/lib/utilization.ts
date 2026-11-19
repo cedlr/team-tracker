@@ -27,11 +27,13 @@ export function utilizationFor(
   return members.map(member => {
     const allocation = member.memberships.find(m => m.teamId === teamId)?.allocation ?? 0;
     const dailyHours = (member.weeklyCapacityHours / 5) * allocation;
-    const capacityHours = dailyHours * days.length;
+    // Capacity starts on the day someone joined, so new joiners are not measured against weeks they were not here.
+    const mine = days.filter(day => day >= member.started);
+    const capacityHours = dailyHours * mine.length;
     const leaveDays = new Set<string>();
     for (const leave of leaves) {
       if (leave.memberId !== member.id) continue;
-      for (const day of days) if (day >= leave.from && day <= leave.to) leaveDays.add(day);
+      for (const day of mine) if (day >= leave.from && day <= leave.to) leaveDays.add(day);
     }
     const leaveHours = leaveDays.size * dailyHours;
     let loggedHours = 0;

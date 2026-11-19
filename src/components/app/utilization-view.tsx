@@ -64,7 +64,7 @@ export function UtilizationView({ rows, trend, teamName, period, range, tasks }:
 
         <section className="tt-split">
           <div className="tt-panel tt-panel-center">
-            <Gauge value={teamRate} max={120} label="Team utilization" detail={`${logged}h of ${available}h`}
+            <Gauge value={teamRate} max={100} label="Team utilization" detail={`${logged}h of ${available}h`}
               thresholds={[{ from: 0, tone: "warning", label: "Low" }, { from: 70, tone: "success", label: "Healthy" }, { from: 100, tone: "danger", label: "Over capacity" }]} />
           </div>
           <div className="tt-panel">
@@ -88,7 +88,7 @@ export function UtilizationView({ rows, trend, teamName, period, range, tasks }:
             description="Utilization fills in as people log hours on their tasks. Log time below or from a task." />
         )}
 
-        <section className="tt-panel">
+        <section className="tt-section">
           <SortableDataTable rows={rows} columns={columns} rowKey="memberId" caption={`Utilization per person in ${teamName}`} itemName={{ one: "person", other: "people" }} defaultSort={{ key: "rate", direction: "desc" }} />
         </section>
 

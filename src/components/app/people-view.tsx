@@ -46,7 +46,7 @@ export function PeopleView({ rows, teamName }: { rows: PersonWork[]; teamName: s
           <MetricCard label="On leave today" value={rows.filter(r => r.onLeaveToday).length} context="From leave records" />
         </section>
         {rows.length ? (
-          <section className="tt-panel">
+          <section className="tt-section">
             <SortableDataTable rows={rows as Row[]} columns={columns} rowKey="id" caption={`People in ${teamName}`} itemName={{ one: "person", other: "people" }} defaultSort={{ key: "progress", direction: "desc" }} />
           </section>
         ) : (
