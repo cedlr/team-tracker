@@ -1,0 +1,325 @@
+.root { position: relative; width: 100%; height: 100%; min-height: 520px; contain: size; overflow: hidden; isolation: isolate; color: var(--foreground); font-family: var(--font-body); font-size: 13px; letter-spacing: -.01em; line-height: 1.4; }
+/* Resets carry no specificity, so Arc's components inside the board keep their own colours and type. */
+:where(.root) :where(h3, p, ul, ol, dl, dd) { margin: 0; }
+:where(.root) :where(ul, ol) { padding: 0; list-style: none; }
+:where(.root) :where(button, input, textarea) { font: inherit; letter-spacing: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+:where(.root) :where(textarea, input)::placeholder { color: var(--text-muted); }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* The shell's page colours (--ss-*) exist inside it, so the board's own surfaces are defined on its parts. */
+.region, .filterBar {
+  --kb-col: color-mix(in oklab, var(--foreground) 3.5%, var(--ss-main));
+  --kb-card: var(--ss-main);
+  --kb-line: var(--border);
+  --kb-peek: var(--ss-main);
+  --peek-w: 420px;
+}
+:global(:root[data-theme="dark"]) :is(.region, .filterBar) {
+  --kb-col: color-mix(in oklab, var(--foreground) 2.5%, var(--ss-main));
+  --kb-card: color-mix(in oklab, var(--foreground) 5.5%, var(--ss-main));
+  --kb-line: color-mix(in oklab, var(--foreground) 9%, var(--ss-main));
+  --kb-peek: var(--surface-raised);
+}
+
+/* ------------------------------------------------------------------ Edge fades (no scrollbars inside the screen) */
+
+.root [data-fade] { scrollbar-width: none; }
+.root [data-fade]::-webkit-scrollbar { display: none; }
+.root [data-fade="x"] { --fl: 0px; --fr: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%); }
+.root [data-fade="y"] { --ft: 0px; --fb: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%); }
+.root [data-fade="xy"] { --fl: 0px; --fr: 0px; --ft: 0px; --fb: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%), linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%), linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+.root [data-fade][data-fl] { --fl: 28px; }
+.root [data-fade][data-fr] { --fr: 40px; }
+.root [data-fade][data-ft] { --ft: 20px; }
+.root [data-fade][data-fb] { --fb: 24px; }
+
+/* ------------------------------------------------------------------ Filter row
+   Arc's search field, buttons and segmented control, tuned to the shell's 32px header density and 8px control radius. */
+
+.filterBar { display: flex; height: 48px; min-width: 0; align-items: center; gap: 6px; }
+.filterRow { display: flex; flex: 1; min-width: 0; height: 100%; align-items: center; gap: 6px; overflow-x: auto; overflow-y: hidden; margin: 0 -4px; padding: 0 4px; }
+.filterRow > * { flex: none; }
+
+.searchWrap { position: relative; width: 232px; flex: none; }
+.searchWrap label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.searchWrap > div { gap: 0; }
+.searchWrap > div > div { min-height: 32px; gap: 8px; border-color: var(--ss-line); border-radius: 8px; padding: 0 4px 0 10px; background: var(--ss-field); }
+.searchWrap > div > div:focus-within { border-color: var(--border-strong); }
+.searchWrap svg { width: 16px; height: 16px; }
+.searchWrap input { font-size: 13px; }
+/* The / hint sits in the clear button's reserved slot and steps aside once there is text to clear. */
+.searchKey { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); pointer-events: none; transition: opacity var(--duration-fast) var(--ease-standard); }
+.searchWrap[data-filled] .searchKey { opacity: 0; }
+
+.filterBar .filterButton { --focus-outline-offset: -2px; display: inline-flex; height: 32px; align-items: center; gap: 6px; border: 1px solid var(--ss-line); border-radius: 8px; padding: 0 10px; background: transparent; color: var(--text-secondary); font-size: 13px; white-space: nowrap; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
+.filterBar .filterButton[data-state="open"] { background: var(--ss-hover); color: var(--foreground); }
+.filterBar .filterButton[data-active] { border-color: color-mix(in oklab, var(--accent) 34%, var(--ss-line)); background: color-mix(in oklab, var(--accent) 6%, transparent); color: var(--foreground); }
+.lead { display: grid; width: 18px; height: 18px; flex: none; place-items: center; }
+.lead > * { grid-area: 1 / 1; transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+.leadIcon { display: grid; place-items: center; }
+.leadCount { display: grid; width: 18px; height: 18px; place-items: center; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-foreground); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; opacity: 0; transform: scale(.85); }
+.lead[data-count] .leadIcon { opacity: 0; transform: scale(.85); }
+.lead[data-count] .leadCount { opacity: 1; transform: none; }
+
+.filterEnd { display: flex; flex: none; align-items: center; gap: 8px; }
+.clearSlot { display: inline-flex; }
+/* Arc's Button at the shell's compact height. */
+.root .smallButton, .filterBar .smallButton, .peek .smallButton { min-height: 30px; border-radius: 8px; padding-inline: 12px; font-size: 13px; }
+.filterBar .groupBy { border-color: var(--ss-line); border-radius: 9px; background: color-mix(in oklab, var(--foreground) 4%, var(--ss-main)); }
+.filterBar .groupBy > div { padding: 2px; }
+.filterBar .groupBy button { min-height: 26px; border-radius: 7px; padding: 0 10px; font-size: 13px; }
+
+/* ------------------------------------------------------------------ Board */
+
+.region { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.region[data-dragging] { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+.scroller { flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior: contain; }
+.scroller[data-mode="assignee"] { overflow-y: auto; }
+
+.board { --col-w: 264px; display: grid; width: max-content; min-width: 100%; align-content: start; gap: 10px; padding: 14px 20px 16px; }
+.board[data-mode="status"] { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
+/* Room to scroll the last column out from under the details panel. */
+.region[data-peek-open] .board { padding-right: calc(var(--peek-w) + 28px); }
+.headRow, .row { display: grid; grid-template-columns: repeat(var(--cols), var(--col-w)); gap: 12px; }
+.board[data-mode="assignee"] .headRow { position: sticky; z-index: 3; top: 0; margin-top: -14px; padding-top: 14px; padding-bottom: 2px; background: var(--ss-main); }
+.lane { display: grid; min-height: 0; gap: 8px; }
+.board[data-mode="status"] .lane, .board[data-mode="status"] .row { height: 100%; min-height: 0; }
+.board[data-mode="assignee"] .lane + .lane { margin-top: 8px; }
+
+.columnHead { display: flex; height: 32px; min-width: 0; align-items: center; gap: 8px; padding: 0 0 0 10px; }
+.columnName { overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.columnCount { display: inline-flex; align-items: baseline; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.limit { color: var(--text-muted); }
+.columnHead[data-over] .columnCount, .columnHead[data-over] .limit { color: var(--warning); }
+.overTag { display: inline-flex; }
+.columnHead .columnAdd { margin-left: auto; color: var(--text-muted); }
+
+/* Arc's animated counter at the text size around it, instead of its display size. */
+.count { display: inline-flex; }
+.count > span { color: inherit; font: inherit; letter-spacing: inherit; line-height: inherit; }
+
+.status[data-kind="backlog"] { color: var(--text-muted); }
+.status[data-kind="unstarted"] { color: var(--text-secondary); }
+.status[data-kind="started"] { color: var(--tone-amber); }
+.status[data-kind="review"] { color: var(--tone-sky); }
+.status[data-kind="done"] { color: var(--tone-green); }
+.status { flex: none; }
+
+.laneHead { position: sticky; left: 20px; display: flex; width: max-content; align-items: center; gap: 8px; padding: 6px 10px 0; font-weight: 500; }
+.laneCount { color: var(--text-muted); font-weight: 400; }
+
+.cell { display: flex; min-width: 0; min-height: 92px; flex-direction: column; gap: 8px; border: 1px solid transparent; border-radius: 12px; padding: 6px; background: var(--kb-col); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+.cell > * { flex: none; }
+.board[data-mode="status"] .cell { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.cell[data-target] { border-color: color-mix(in oklab, var(--accent) 34%, transparent); background: color-mix(in oklab, var(--accent) 4%, var(--kb-col)); }
+.cell[data-over] { background: color-mix(in oklab, var(--warning) 6%, var(--kb-col)); }
+
+/* ------------------------------------------------------------------ Cards */
+
+.card { --focus-outline-offset: 1px; position: relative; border-radius: 10px; cursor: grab; touch-action: manipulation; -webkit-touch-callout: none; }
+.cardInner { display: grid; gap: 7px; border: 1px solid var(--kb-line); border-radius: 10px; padding: 10px 12px 10px; background: var(--kb-card); box-shadow: var(--shadow-resting); }
+.cardInner[data-selected] { border-color: color-mix(in oklab, var(--accent) 30%, var(--kb-line)); background: color-mix(in oklab, var(--accent) 5%, var(--kb-card)); }
+.card[data-lifted] .cardInner { border-color: var(--accent); box-shadow: var(--shadow-raised), 0 0 0 3px var(--accent-subtle); }
+.overlayCard .cardInner { border-color: color-mix(in oklab, var(--accent) 40%, var(--kb-line)); box-shadow: var(--shadow-floating); transition: box-shadow var(--duration-standard) var(--ease-standard), border-color var(--duration-standard) var(--ease-standard); }
+.overlayCard[data-dropping] .cardInner { border-color: var(--kb-line); box-shadow: var(--shadow-resting); }
+
+.cardTop { display: flex; min-width: 0; min-height: 20px; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; }
+.cardProject { display: inline-flex; }
+.toneIcon { flex: none; color: var(--kb-tone); }
+.cardId { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cardLink { display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.cardLink[data-state="open"] svg { color: var(--tone-green); }
+.cardLink[data-state="merged"] svg { color: var(--tone-violet); }
+.cardLink[data-state="draft"] svg { color: var(--text-muted); }
+.cardFace { display: inline-flex; margin-left: auto; }
+.cardTitle { display: -webkit-box; overflow: hidden; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.cardMeta { display: flex; min-height: 22px; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cardPriority { display: inline-grid; width: 18px; height: 20px; place-items: center; }
+/* Arc's Badge on the card surface: neutral, so the label's coloured icon carries the category. */
+.labelBadge { --badge-background: color-mix(in oklab, var(--foreground) 5%, var(--kb-card, var(--surface))); --badge-foreground: var(--text-secondary); }
+.stats { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; color: var(--text-muted); font-size: 11.5px; }
+.stat { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat[data-complete] { color: var(--success); }
+.stat[data-due="soon"], .propDue[data-due="soon"] { color: var(--warning); }
+.stat[data-due="overdue"], .propDue[data-due="overdue"] { color: var(--danger); }
+.ring { flex: none; color: var(--text-secondary); }
+.ring[data-complete] { color: var(--success); }
+
+.priority { flex: none; color: var(--text-secondary); }
+.priority[data-priority="urgent"] { color: var(--tone-rose); }
+.priority[data-priority="none"] { color: var(--text-muted); }
+
+.face { flex: none; font-size: 9px; }
+.faceEmpty { display: inline-block; border: 1px dashed var(--border-strong); border-radius: 50%; background: transparent; }
+
+.placeholder { display: grid; flex: none; place-items: center; border: 1.5px dashed color-mix(in oklab, var(--accent) 50%, transparent); border-radius: 10px; background: var(--accent-subtle); }
+.placeholder[data-warn] { border-color: color-mix(in oklab, var(--warning) 60%, transparent); background: color-mix(in oklab, var(--warning) 7%, transparent); }
+.placeholderNote { display: inline-flex; align-items: center; gap: 6px; color: var(--warning); font-size: 12px; }
+.overlay { position: absolute; z-index: 20; top: 0; left: 0; pointer-events: none; will-change: transform; }
+
+.addSlot { display: flex; }
+.cell .addRow { width: 100%; min-height: 32px; justify-content: flex-start; border-radius: 8px; padding: 0 8px; color: var(--text-muted); font-size: 13px; font-weight: 400; }
+.cell .addRow > span { justify-content: flex-start; }
+.composer { display: grid; overflow: hidden; }
+.composer textarea { width: 100%; min-height: 64px; border: 1px solid var(--border-strong); border-radius: 10px; padding: 10px 12px; background: var(--kb-card); resize: none; outline: none; }
+.composerActions { display: flex; align-items: center; gap: 6px; padding-top: 8px; }
+.composerHint { margin-right: auto; overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+.copyButton[data-copied="ok"] { color: var(--success); }
+.copyButton[data-copied="error"] { color: var(--danger); }
+
+.empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; pointer-events: none; }
+.empty > * { pointer-events: auto; }
+.empty p { color: var(--text-secondary); }
+.notice { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 24px; text-align: center; }
+.noticeTitle { font-size: 15px; font-weight: 500; }
+.noticeBody { margin-bottom: 10px !important; color: var(--text-muted); }
+
+/* ------------------------------------------------------------------ Details panel */
+
+.peek { position: absolute; z-index: 12; top: 8px; right: 8px; bottom: 8px; display: flex; width: min(var(--peek-w), calc(100% - 16px)); flex-direction: column; overflow: hidden; border: 1px solid var(--ss-line); border-radius: 12px; background: var(--kb-peek); box-shadow: var(--shadow-floating); cursor: auto; }
+.peekBar { display: flex; height: 48px; flex: none; align-items: center; gap: 2px; border-bottom: 1px solid var(--border-subtle); padding: 0 8px 0 16px; }
+.peekBar button:disabled { opacity: .35; cursor: default; }
+.peekTrail { display: inline-flex; min-width: 0; flex: 1; align-items: center; gap: 7px; overflow: hidden; color: var(--text-muted); white-space: nowrap; }
+.peekProject { overflow: hidden; text-overflow: ellipsis; }
+.peekSep { opacity: .6; }
+.peekId { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.peekCount { margin-right: 4px; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.peekScroll { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 18px; overflow-y: auto; overscroll-behavior: contain; padding: 18px 20px 24px; }
+.peekScroll > * { flex: none; }
+.peekTitle { width: 100%; overflow: hidden; border: 0; padding: 0; background: transparent; font-size: 18px !important; font-weight: 500; letter-spacing: -.015em !important; line-height: 1.35; resize: none; outline: none; }
+.peekDescription { width: 100%; min-height: 40px; overflow: hidden; margin-top: -8px; border: 0; padding: 0; background: transparent; color: var(--text-secondary); line-height: 1.55; resize: none; outline: none; }
+
+.props { display: grid; gap: 1px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); padding: 8px 0; }
+.props > div { display: grid; min-height: 34px; grid-template-columns: 96px minmax(0, 1fr); align-items: center; }
+.props dt { color: var(--text-muted); }
+.props dd { min-width: 0; }
+.propButton { --focus-outline-offset: -2px; display: inline-flex; max-width: calc(100% + 8px); min-height: 30px; flex-wrap: wrap; align-items: center; gap: 6px 7px; margin-left: -8px; border: 0; border-radius: 7px; padding: 4px 8px; background: transparent; color: var(--foreground); text-align: left; cursor: pointer; }
+.propButton[data-state="open"] { background: var(--ss-hover); }
+.propButton .labelBadge { --badge-background: color-mix(in oklab, var(--foreground) 5%, var(--kb-peek)); }
+.propEmpty { color: var(--text-muted); }
+.propStatic { display: inline-flex; align-items: center; gap: 7px; color: var(--text-secondary); }
+
+.peekSection { display: grid; gap: 10px; }
+.sectionHead { display: flex; align-items: center; justify-content: space-between; }
+.sectionHead h3 { font-size: 13px; font-weight: 500; }
+.sectionMeta { display: inline-flex; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* Arc's Progress, slimmed to the panel's rhythm. */
+.subProgress > div:last-child { height: 5px; }
+.checklist { display: grid; }
+.checklist li { overflow: hidden; }
+/* Arc's Checkbox at list density: a 32px hit area and a regular weight label that strikes through when done. */
+.checkRow > div { display: flex; align-items: center; }
+.checkRow button { width: 32px; height: 32px; margin-left: -7px; border-radius: 8px; }
+.checkRow button > span { width: 16px; height: 16px; }
+.checkRow button svg { width: 16px; height: 16px; }
+.checkRow > div > div { padding-top: 0; }
+.checkRow label { color: var(--foreground); font-size: 13px; font-weight: 400; transition: color var(--duration-fast) var(--ease-standard); }
+.checkRow[data-done] label { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--border-strong); }
+.inlineForm { display: flex; height: 32px; align-items: center; gap: 10px; color: var(--text-muted); }
+.inlineForm input { min-width: 0; flex: 1; height: 100%; border: 0; padding: 0; background: transparent; color: var(--foreground); outline: none; }
+.inlineAction { display: inline-flex; min-width: 56px; justify-content: flex-end; }
+
+.links { display: grid; gap: 6px; }
+.linkRow { display: flex; min-width: 0; align-items: center; gap: 10px; border: 1px solid var(--kb-line); border-radius: 9px; padding: 8px 10px; }
+.linkMark { display: grid; width: 18px; flex: none; place-items: center; color: var(--foreground); }
+.linkText { display: grid; min-width: 0; flex: 1; }
+.linkTitle, .linkDetail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linkDetail { color: var(--text-muted); font-size: 12px; }
+
+.activity { display: grid; gap: 12px; }
+.activityItem { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; overflow: hidden; }
+.activityItem[data-kind="event"] .face { justify-self: center; margin-top: 1px; }
+.eventText { color: var(--text-muted); font-size: 12.5px; line-height: 20px; }
+.eventText > span { color: var(--text-secondary); font-weight: 500; }
+.comment { border: 1px solid var(--kb-line); border-radius: 10px; padding: 9px 12px 10px; background: color-mix(in oklab, var(--foreground) 2%, var(--kb-peek)); }
+.commentHead { display: flex; align-items: baseline; gap: 8px; }
+.commentHead span { font-weight: 500; }
+.commentHead time { color: var(--text-muted); font-size: 12px; }
+.commentBody { margin-top: 3px !important; line-height: 1.5; }
+.commentForm { display: grid; gap: 6px; border: 1px solid var(--kb-line); border-radius: 10px; padding: 10px 12px 8px; background: var(--ss-field); }
+.commentForm:focus-within { border-color: var(--border-strong); }
+.commentForm textarea { width: 100%; border: 0; padding: 0; background: transparent; line-height: 1.5; resize: none; outline: none; }
+.commentActions { display: flex; align-items: center; gap: 8px; }
+.commentActions .composerHint { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ------------------------------------------------------------------ Floating list */
+
+/* Arc's Popover holds the list. It renders outside the screen, so it sets its own type, and matches the shell's menu radius. */
+.menu[data-side] { min-width: 208px; max-height: min(340px, var(--radix-popover-content-available-height, 340px)); overflow-y: auto; border-radius: 14px; padding: 4px; color: var(--foreground); font-family: var(--font-body); font-size: 13px; letter-spacing: -.01em; line-height: 1.4; outline: none; scrollbar-width: none; }
+.menu[data-side]::-webkit-scrollbar { display: none; }
+.option { display: flex; min-height: 34px; align-items: center; gap: 10px; border-radius: 10px; padding: 0 10px; cursor: pointer; user-select: none; }
+.option[data-cursor] { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+/* A check mark, never a filled dot: the box fills with the control colour and shows its check when chosen. */
+.optionBox { display: grid; width: 16px; height: 16px; flex: none; place-items: center; border: 1px solid var(--border-strong); border-radius: 5px; color: transparent; }
+.optionBox[data-on] { border-color: var(--control-on); background: var(--control-on); color: var(--control-glyph); }
+.optionIcon { display: grid; width: 20px; flex: none; place-items: center; }
+.optionIcon .priority { width: 16px; height: 16px; }
+.optionLabel { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.optionHint { flex: none; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.optionCheck { flex: none; }
+
+/* ------------------------------------------------------------------ Shortcuts */
+
+.scrim { position: absolute; z-index: 30; inset: 0; background: color-mix(in oklab, var(--background) 60%, transparent); }
+.dialog { position: absolute; z-index: 31; inset: 0; width: min(440px, calc(100% - 32px)); height: fit-content; margin: auto; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-raised); box-shadow: var(--shadow-floating); }
+.dialogHead { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px 6px 18px; }
+.dialogHead h3 { font-size: 14px; font-weight: 500; }
+.shortcutList { display: grid; padding: 4px 18px 14px; }
+.shortcutList > div { display: flex; min-height: 36px; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border-subtle); }
+.shortcutList dt { color: var(--text-secondary); }
+.shortcutKeys { display: inline-flex; gap: 4px; }
+
+/* ------------------------------------------------------------------ Cycle, at the foot of the sidebar */
+
+.cycle { --focus-outline-offset: -2px; display: grid; width: 100%; gap: 8px; border: 0; border-radius: 10px; padding: 10px 12px 10px; background: transparent; color: var(--foreground); font: inherit; font-size: 13px; letter-spacing: -.01em; text-align: left; cursor: pointer; }
+.cycle[aria-current] { background: var(--ss-active, color-mix(in oklab, var(--foreground) 6%, transparent)); }
+.cycleHead { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.cycleIcon { flex: none; color: var(--text-secondary); }
+.cycleName { min-width: 0; flex: 1; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.cycleLeft { flex: none; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.cycleBar > div:last-child { height: 5px; }
+.cycleMeta { display: flex; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* Hover fills are instant; only pointers that can hover get them. */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .cardInner { border-color: var(--border-strong); }
+  .card:hover .cardInner[data-selected] { border-color: color-mix(in oklab, var(--accent) 40%, var(--kb-line)); }
+  .filterBar .filterButton:hover, .propButton:hover, .cycle:hover { background: var(--ss-hover, color-mix(in oklab, var(--foreground) 5%, transparent)); color: var(--foreground); transition: none; }
+  .cell .addRow:hover { color: var(--foreground); }
+}
+
+/* ------------------------------------------------------------------ Narrow frames (the shell's main area is a container) */
+
+@container screen-main (max-width: 899px) {
+  .searchWrap { width: 196px; }
+}
+
+@container screen-main (max-width: 599px) {
+  .filterBar { height: auto; flex-wrap: wrap; row-gap: 0; padding-top: 8px; }
+  .searchWrap { width: auto; min-width: 0; flex: 1; }
+  .searchKey { display: none; }
+  .filterEnd { order: 2; }
+  .filterRow { order: 3; height: 48px; flex-basis: 100%; }
+  .filterBar .groupBy button { padding: 0 9px; }
+  .board { --col-w: calc(100cqw - 52px); padding: 12px 14px 14px; }
+  .board[data-mode="assignee"] .headRow { margin-top: -12px; padding-top: 12px; }
+  .scroller { scroll-snap-type: x mandatory; scroll-padding-inline: 14px; }
+  .row > * { scroll-snap-align: start; }
+  .laneHead { left: 14px; }
+  .region[data-peek-open] .board { padding-right: 14px; }
+  .peek { inset: 0; width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  .peekScroll { padding: 16px 16px 24px; }
+  .props > div { grid-template-columns: 88px minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root *, .root *::before, .root *::after { transition-duration: 0s !important; }
+}

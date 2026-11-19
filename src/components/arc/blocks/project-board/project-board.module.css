@@ -1,0 +1,361 @@
+.root {
+  --pb-hover: var(--ss-hover, color-mix(in oklab, var(--foreground) 5%, transparent));
+  --pb-active: var(--ss-active, color-mix(in oklab, var(--foreground) 7%, transparent));
+  --pb-line: var(--ss-line, var(--border));
+  --pb-main: var(--ss-main, var(--background));
+  --pb-tint: 10%;
+  --pb-check: var(--ss-main, var(--surface));
+  width: 100%;
+  height: min(820px, 88dvh);
+  min-height: 560px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+:global(:root[data-theme="dark"]) .root { --pb-tint: 12%; }
+/* The bare screen frame: fill the viewport like a real app. */
+:global([data-layout="app"]) .root { position: fixed; inset: 0; height: auto; min-height: 0; border: 0; border-radius: 0; }
+
+.tabular { font-variant-numeric: tabular-nums; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+/* Arc's Avatar drawn at the row's size. Tripled class so it outranks the component's own size class; it also renders inside portaled pickers. */
+.avatar.avatar.avatar { --pb-av: 20px; width: var(--pb-av); height: var(--pb-av); flex: none; }
+.projectIcon { flex: none; color: var(--pb-tone, var(--text-secondary)); }
+.statusIcon { flex: none; }
+.statusIcon[data-status="On track"] { color: var(--success); }
+.statusIcon[data-status="At risk"] { color: var(--warning); }
+.statusIcon[data-status="Off track"] { color: var(--danger); }
+.statusIcon[data-status="Paused"] { color: var(--text-muted); }
+.ring { display: block; flex: none; }
+.ringTrack { stroke: color-mix(in oklab, var(--foreground) 10%, transparent); }
+.ringFill { stroke: var(--accent); transition: stroke-dasharray var(--duration-standard) var(--ease-standard); }
+.ring[data-tone="success"] .ringFill { stroke: var(--success); }
+.ring[data-tone="warning"] .ringFill { stroke: var(--warning); }
+.ring[data-tone="danger"] .ringFill { stroke: var(--danger); }
+.ring[data-tone="neutral"] .ringFill { stroke: var(--text-muted); }
+.toolMark { display: inline-block; flex: none; vertical-align: -2px; }
+:where(.root) button { font: inherit; letter-spacing: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+
+/* ------------------------------------------------------------------ Page frame */
+
+.pageFill, .panelFill { display: flex; height: 100%; min-height: 0; flex: 1; flex-direction: column; }
+.scroller { --fs: 0px; --fe: 0px; flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fs), #000 calc(100% - var(--fe)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fs), #000 calc(100% - var(--fe)), transparent 100%); }
+.scroller::-webkit-scrollbar, .track::-webkit-scrollbar, .pickerOptions::-webkit-scrollbar { display: none; }
+.scroller[data-fade-start] { --fs: 20px; }
+.scroller[data-fade-end] { --fe: 24px; }
+.page { width: 100%; max-width: 1040px; margin: 0 auto; padding: 28px 32px 48px; }
+
+/* Arc's Tabs in the header's lower row. */
+.viewTabs { padding: 2px 0 12px; }
+.tabCount { margin-left: 4px; color: var(--text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------ Sidebar portfolio */
+
+.sideProjects { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.sideProject { --focus-outline-offset: -2px; display: flex; width: 100%; min-width: 0; min-height: 44px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 6px 10px 6px 12px; background: transparent; color: var(--text-secondary); text-align: left; cursor: pointer; }
+.sideProject[aria-current] { background: var(--ss-active, var(--pb-active)); color: var(--foreground); }
+.sideProject:active { background: var(--ss-hover, var(--pb-hover)); }
+.sideProject .projectIcon { align-self: flex-start; margin-top: 2px; }
+.sideProject .ring { align-self: flex-start; margin-top: 2px; }
+.sideProjectText { display: grid; min-width: 0; flex: 1; gap: 1px; }
+.sideProjectName { overflow: hidden; font-size: var(--text-sm); line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.sideProjectNext { overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  .sideProject:hover { background: var(--ss-hover, var(--pb-hover)); color: var(--foreground); }
+  .sideProject[aria-current]:hover { background: var(--ss-active, var(--pb-active)); }
+}
+
+.swap { display: inline-grid; text-align: center; }
+.swap > span { grid-area: 1 / 1; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+.swap > span[data-on] { opacity: 1; }
+
+/* ------------------------------------------------------------------ Project head */
+
+.projectHead { margin-bottom: 24px; }
+.pageTitle { display: flex; align-items: center; gap: 10px; margin: 0; font-size: var(--text-xl); font-weight: 500; letter-spacing: -.02em; line-height: 1.25; }
+.summary { max-width: 640px; margin: 8px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
+.props { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 16px; color: var(--text-secondary); font-size: 13px; }
+.propTeam { display: inline-flex; margin-left: -6px; }
+.prop { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.propIcon { color: var(--text-muted); }
+.propMuted { color: var(--text-muted); }
+.statusPicker.statusPicker { margin-left: -4px; padding: 0 6px 0 4px; }
+
+/* ------------------------------------------------------------------ Stats */
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 0 32px; overflow: hidden; border: 1px solid var(--pb-line); border-radius: 16px; }
+.stat { display: grid; min-width: 0; align-content: start; gap: 6px; padding: 16px 18px 18px; }
+.stat + .stat { border-left: 1px solid var(--border-subtle); }
+.stat dt { color: var(--text-muted); font-size: var(--text-xs); }
+/* Arc's AnimatedCounter, one step down from its display size so four sit in a row. */
+.stat dd { display: flex; align-items: baseline; gap: 6px; margin: 0; line-height: 1.1; }
+.stat dd > span { font-size: var(--text-2xl); }
+.statUnit { color: var(--text-secondary); font-size: var(--text-sm); }
+.statNote { overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.statNote[data-tone="danger"] { color: var(--danger); }
+.statProgress { margin-top: 4px; }
+
+/* ------------------------------------------------------------------ Sections */
+
+.block { min-width: 0; margin-bottom: 32px; }
+.block:last-child { margin-bottom: 0; }
+.sectionHead { display: flex; height: 28px; align-items: center; gap: 8px; margin-bottom: 8px; }
+.sectionHead h2 { margin: 0; overflow: hidden; font-size: 14px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.sectionMeta { flex: none; color: var(--text-muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.linkButton.linkButton { margin-left: auto; margin-right: -8px; }
+.empty { display: grid; justify-items: center; gap: 12px; border-radius: 16px; padding: 28px 16px; background: color-mix(in oklab, var(--foreground) 3%, transparent); color: var(--text-muted); text-align: center; }
+.empty p { margin: 0; font-size: 13px; }
+
+/* ------------------------------------------------------------------ Milestones */
+
+.track { --fs: 0px; --fe: 0px; display: grid; grid-template-columns: repeat(var(--pb-count), minmax(148px, 1fr)); gap: 4px; margin: 0 -4px; overflow-x: auto; padding: 0 4px; scrollbar-width: none; overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fs), #000 calc(100% - var(--fe)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fs), #000 calc(100% - var(--fe)), transparent 100%); }
+.track[data-fade-start] { --fs: 24px; }
+.track[data-fade-end] { --fe: 24px; }
+.milestone { --focus-outline-offset: -2px; position: relative; display: grid; min-width: 0; gap: 3px; border: 0; border-radius: 10px; padding: 10px 12px 11px; background: transparent; text-align: left; cursor: pointer; }
+.milestone[aria-checked="true"] { background: var(--pb-active); }
+@media (hover: hover) and (pointer: fine) { .milestone:not([aria-checked="true"]):hover { background: var(--pb-hover); } }
+.milestoneBar { display: block; height: 3px; margin-bottom: 7px; overflow: hidden; border-radius: var(--radius-pill); background: color-mix(in oklab, var(--foreground) 9%, transparent); }
+.milestoneBar > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transform-origin: 0 50%; }
+.milestone[data-complete] .milestoneBar > span { background: var(--success); }
+.milestoneName { overflow: hidden; color: var(--foreground); font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.milestoneMeta { display: flex; gap: 5px; overflow: hidden; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+
+
+/* ------------------------------------------------------------------ Task rows */
+
+.rows { display: grid; gap: 1px; margin: 0 -10px; padding: 0; list-style: none; }
+.row { position: relative; display: flex; min-width: 0; align-items: center; border-radius: 8px; background: transparent; }
+.row:hover { background: var(--pb-hover); }
+.row[data-selected] { background: var(--pb-active); }
+.row[data-dragging] { z-index: 2; background: var(--pb-main); box-shadow: var(--shadow-raised); }
+.stageButton { --focus-outline-offset: -3px; display: grid; width: 34px; height: 36px; flex: none; place-items: center; border: 0; border-radius: 8px; padding: 0; background: transparent; cursor: pointer; }
+.stageIcon { display: block; flex: none; }
+.stageIcon[data-stage="planned"] { color: var(--text-muted); }
+.stageIcon[data-stage="progress"] { color: var(--warning); }
+.stageIcon[data-stage="review"] { color: var(--info); }
+.stageIcon[data-stage="done"] { color: var(--success); }
+.rowMain { --focus-outline-offset: -2px; display: flex; min-width: 0; height: 36px; flex: 1; align-items: center; gap: 12px; border: 0; border-radius: 8px; padding: 0 10px 0 0; background: transparent; color: var(--foreground); font-size: 13px; text-align: left; cursor: pointer; }
+.rowId { width: 64px; flex: none; white-space: nowrap; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.rowTitle { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row[data-done] .rowTitle { color: var(--text-muted); text-decoration: line-through; text-decoration-color: color-mix(in oklab, var(--text-muted) 60%, transparent); }
+.rowTag { display: inline-flex; max-width: 180px; flex: none; align-items: center; gap: 6px; overflow: hidden; color: var(--text-secondary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.rowMeta { display: inline-flex; flex: none; align-items: center; gap: 10px; color: var(--text-muted); }
+.rowComments { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.priorityIcon { display: block; color: var(--text-secondary); }
+.priorityIcon[data-urgent] { color: var(--danger); }
+.rowDue { width: 46px; flex: none; color: var(--text-muted); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.root [data-overdue] { color: var(--danger); }
+.grip { display: grid; width: 18px; height: 36px; flex: none; place-items: center; margin-right: -8px; color: var(--text-muted); cursor: grab; opacity: 0; touch-action: none; }
+.row:hover .grip, .row:focus-within .grip, .row[data-dragging] .grip { opacity: 1; }
+.row[data-dragging] .grip { cursor: grabbing; }
+
+/* ------------------------------------------------------------------ Activity */
+
+.activityList { display: grid; gap: 1px; margin: 0 -10px; padding: 0; list-style: none; }
+.activityRow { border-radius: 10px; }
+.activityRow:has(button:hover) { background: var(--pb-hover); }
+.activityMain { --focus-outline-offset: -2px; display: flex; width: 100%; min-width: 0; align-items: flex-start; gap: 10px; border: 0; border-radius: 10px; padding: 8px 10px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.activityMain[data-static] { cursor: default; }
+.activityAvatar { margin-top: 1px; }
+.activityText { display: grid; min-width: 0; flex: 1; gap: 6px; }
+.activitySentence { color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
+.activityWho, .activityTarget { color: var(--foreground); }
+.activityWho { font-weight: 500; }
+.activitySentence .toolMark { margin-right: 5px; }
+.activityBody { border-radius: 8px; padding: 7px 10px; background: color-mix(in oklab, var(--foreground) 4%, transparent); color: var(--text-secondary); font-size: 12.5px; line-height: 1.45; }
+.activityRow[data-compact] .activitySentence { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.activityBodyText { display: block; }
+.activityRow[data-compact] .activityBodyText { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.activitySide { display: inline-flex; flex: none; align-items: center; gap: 10px; padding-top: 1px; }
+.activityTime { color: var(--text-muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.activityRow[data-unread] .activityTime { color: var(--accent); font-weight: 500; }
+.activityRow[data-unread] .activitySentence { color: var(--foreground); }
+.dayHead { margin: 0 0 4px; color: var(--text-muted); font-size: 12.5px; font-weight: 400; }
+
+/* ------------------------------------------------------------------ Tasks toolbar and groups */
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-bottom: 24px; }
+.toolbarEnd { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+.toolbarEnd .linkButton.linkButton { margin: 0; }
+.toolbarCount { color: var(--text-muted); font-size: 12.5px; white-space: nowrap; }
+.people { display: inline-flex; gap: 2px; }
+.personToggle { --focus-outline-offset: 0px; display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 50%; padding: 0; background: transparent; cursor: pointer; transition: transform var(--duration-instant) var(--ease-standard); }
+@media (hover: hover) and (pointer: fine) { .personToggle:hover { background: var(--pb-hover); } }
+.personToggle[aria-pressed="true"] { background: var(--pb-active); }
+.personToggle:active { transform: scale(.97); }
+.personToggle .avatar { transition: opacity var(--duration-fast) var(--ease-standard); }
+.personToggle[data-dim] .avatar { opacity: .4; }
+
+.group + .group { margin-top: 20px; }
+.groupHead { margin: 0 0 4px; font-size: 12.5px; font-weight: 500; }
+.groupLabel, .groupToggle { display: inline-flex; height: 28px; align-items: center; gap: 8px; border: 0; border-radius: 7px; margin-left: -8px; padding: 0 8px; background: transparent; color: var(--text-secondary); }
+.groupToggle { --focus-outline-offset: -2px; cursor: pointer; }
+.groupToggle:hover { background: var(--pb-hover); color: var(--foreground); }
+.groupCount { color: var(--text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.groupChevron { color: var(--text-muted); transition: transform var(--duration-fast) var(--ease-standard); }
+.groupChevron[data-open] { transform: rotate(90deg); }
+.hint { margin: 24px 0 0; color: var(--text-muted); font-size: 12px; }
+
+/* ------------------------------------------------------------------ Picker on Arc's Popover. The list is portaled, so it reads tokens only. */
+
+.pickerTrigger { --focus-outline-offset: -2px; display: inline-flex; min-width: 0; height: 32px; align-items: center; gap: 8px; border: 0; border-radius: 8px; margin-left: -8px; padding: 0 8px; background: transparent; color: var(--foreground); font-size: 13px; cursor: pointer; }
+.pickerTrigger[data-state="open"] { background: var(--pb-hover); }
+.pickerTrigger[data-variant="field"] { height: var(--control-height-md); margin-left: 0; border: 1px solid var(--border); border-radius: var(--radius-control); padding: 0 12px 0 14px; background: var(--surface); color: var(--foreground); font-size: var(--text-sm); }
+.pickerTrigger[data-variant="field"][data-state="open"] { border-color: var(--border-strong); background: var(--surface-muted); }
+@media (hover: hover) and (pointer: fine) {
+  .pickerTrigger:hover { background: var(--pb-hover); }
+  .pickerTrigger[data-variant="field"]:hover { border-color: var(--border-strong); background: var(--surface-muted); }
+}
+.pickerValue { display: inline-flex; min-width: 0; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pickerChevron { flex: none; color: var(--text-muted); }
+.pickerList.pickerList { min-width: 232px; padding: 4px; }
+.pickerOptions { display: grid; max-height: 300px; overflow-y: auto; scrollbar-width: none; }
+.pickerOption { display: flex; width: 100%; min-height: 36px; align-items: center; gap: 10px; border: 0; border-radius: 14px; padding: 4px 10px; background: transparent; color: var(--foreground); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; outline: none; }
+.pickerOption:hover, .pickerOption:focus { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.pickerText { display: grid; min-width: 0; flex: 1; }
+.pickerText > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pickerDetail { color: var(--text-muted); font-size: var(--text-xs); }
+.pickerCheck { flex: none; color: var(--accent); }
+
+/* ------------------------------------------------------------------ Home */
+
+.projectRows { display: grid; margin: 0 -10px; padding: 0; list-style: none; }
+.projectRows > li + li { border-top: 1px solid var(--border-subtle); }
+.projectRow { --focus-outline-offset: -2px; display: grid; width: 100%; min-height: 56px; align-items: center; gap: 20px; grid-template-columns: minmax(0, 1.3fr) minmax(0, .9fr) 132px 104px minmax(0, 1.2fr); border: 0; border-radius: 10px; padding: 0 10px; background: transparent; color: var(--foreground); font-size: 13px; text-align: left; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .projectRow:hover { background: var(--pb-hover); } }
+.projectName { display: inline-flex; min-width: 0; align-items: center; gap: 10px; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.projectLead { display: inline-flex; min-width: 0; align-items: center; gap: 8px; overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+.projectProgress { display: grid; align-items: center; gap: 10px; grid-template-columns: minmax(0, 1fr) 32px; color: var(--text-secondary); font-size: 12px; text-align: right; }
+.projectStatus { display: inline-flex; min-width: 0; }
+.projectNext { min-width: 0; overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+.projectNext .tabular { color: var(--text-muted); }
+
+/* ------------------------------------------------------------------ Right panel */
+
+.panelScroll { height: 100%; }
+.panelBody { padding: 16px 20px 32px; }
+.panelTop { display: flex; height: 36px; align-items: center; gap: 8px; margin: 0 0 10px -8px; color: var(--text-muted); font-size: 12.5px; }
+.backButton.backButton { width: var(--control-height-sm); flex: none; padding: 0; }
+.panelCrumb { display: inline-flex; min-width: 0; align-items: center; gap: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panelId { flex: none; margin-left: auto; font-variant-numeric: tabular-nums; }
+aside[data-sheet] .panelTop { padding-right: 36px; }
+
+.detailTitleRow { display: flex; align-items: flex-start; gap: 2px; margin: 0 0 14px -10px; }
+.detailTitleRow .stageButton { height: 34px; }
+.detailTitle { width: 100%; min-width: 0; flex: 1; border: 1px solid transparent; border-radius: 8px; padding: 5px 7px; background: transparent; color: var(--foreground); font: inherit; font-size: 16px; font-weight: 500; letter-spacing: -.015em; line-height: 1.4; resize: none; field-sizing: content; outline: none; }
+.detailTitle:hover { background: var(--pb-hover); }
+.detailTitle:focus { border-color: var(--border-strong); background: transparent; }
+
+.fields { display: grid; align-items: center; gap: 2px 12px; grid-template-columns: 80px minmax(0, 1fr); margin: 0 0 14px; }
+.fields dt { color: var(--text-muted); font-size: 12.5px; }
+.fields dd { position: relative; display: flex; min-width: 0; margin: 0; }
+.description { display: block; width: 100%; min-height: 88px; border: 1px solid var(--border-strong); border-radius: var(--radius-control); padding: 12px; background: var(--surface); color: var(--foreground); font: inherit; font-size: 13px; line-height: 1.5; resize: none; field-sizing: content; outline: none; }
+.description::placeholder { color: var(--text-muted); }
+@media (hover: hover) and (pointer: fine) { .description:hover { border-color: var(--foreground); } }
+.description:focus { border-color: var(--foreground); }
+
+.panelSection { margin-top: 24px; }
+.panelSection[data-first] { margin-top: 6px; }
+.panelHead { display: flex; height: 26px; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--text-muted); font-size: 12.5px; }
+.panelHead h3 { margin: 0; color: var(--foreground); font-size: 13px; font-weight: 500; }
+.panelHead > span { margin-left: auto; }
+
+.checklist { display: grid; margin: 0 0 4px -12px; padding: 0; list-style: none; }
+.check { overflow: hidden; }
+.check[data-done] label { color: var(--text-muted); text-decoration: line-through; text-decoration-color: color-mix(in oklab, var(--text-muted) 60%, transparent); }
+/* Arc's Input and Textarea carry visible labels; the section heading already names them, so the labels are read but not shown. */
+.inlineAdd label, .composer label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.inlineAdd { position: relative; margin-top: 4px; }
+.thread { display: grid; margin: 0 0 10px; padding: 0; list-style: none; }
+.comment { display: flex; gap: 10px; overflow: hidden; padding: 6px 0; }
+.comment > .avatar { margin-top: 1px; }
+.commentBody { min-width: 0; flex: 1; }
+.commentHead { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 12.5px; }
+.commentHead > span:first-child { font-weight: 500; }
+.commentHead > span:last-child { color: var(--text-muted); font-size: 12px; }
+.commentText { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.composer { position: relative; }
+.composer textarea { min-height: 88px; resize: none; }
+.composerBar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.composerHint { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: var(--text-xs); }
+
+.teamList, .linkList, .miniList { display: grid; gap: 1px; margin: 0 -8px; padding: 0; list-style: none; }
+.teamRow, .linkRow, .miniRow { --focus-outline-offset: -2px; display: flex; width: 100%; min-width: 0; align-items: center; gap: 10px; border: 0; border-radius: 9px; padding: 6px 8px; background: transparent; color: var(--foreground); font-size: 13px; text-align: left; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .teamRow:hover, .linkRow:hover, .miniRow:hover { background: var(--pb-hover); } }
+.teamText, .linkText, .miniText { display: grid; min-width: 0; flex: 1; }
+.teamText > span, .linkText > span, .miniText > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linkDetail { color: var(--text-muted); font-size: 12px; }
+.load { display: inline-flex; flex: none; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 12px; }
+.loadBar { display: block; width: 44px; height: 4px; overflow: hidden; border-radius: var(--radius-pill); background: color-mix(in oklab, var(--foreground) 8%, transparent); }
+.loadBar > span { display: block; height: 100%; border-radius: inherit; background: var(--text-secondary); transform-origin: 0 50%; }
+.linkAction { display: inline-grid; min-width: 64px; flex: none; justify-items: end; color: var(--text-muted); font-size: 12px; }
+.linkActionInner { display: inline-flex; grid-area: 1 / 1; align-items: center; gap: 4px; }
+.linkActionInner[data-state="done"] { color: var(--success); }
+.linkActionInner[data-state="failed"] { color: var(--danger); }
+.linkRow .toolMark { margin: 0 2px; }
+
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.weekDay { --focus-outline-offset: -2px; position: relative; display: grid; height: 66px; justify-items: center; align-content: center; gap: 2px; border: 0; border-radius: 10px; padding: 0; background: transparent; cursor: pointer; }
+.weekDay[aria-checked="true"] { background: var(--pb-active); }
+@media (hover: hover) and (pointer: fine) { .weekDay:not([aria-checked="true"]):hover { background: var(--pb-hover); } }
+.weekName { color: var(--text-muted); font-size: 11.5px; }
+.weekDay[data-today] .weekName { color: var(--foreground); }
+.weekNum { color: var(--foreground); font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.weekCount { height: 16px; color: var(--accent); font-size: var(--text-xs); font-weight: 500; line-height: 16px; font-variant-numeric: tabular-nums; }
+.miniRow { align-items: flex-start; }
+.miniRow .stageIcon { margin-top: 2px; }
+.miniEmpty { padding: 8px; color: var(--text-muted); font-size: 13px; }
+
+.shortcuts { display: grid; margin: 0 0 18px; }
+.shortcuts > div { display: flex; min-height: 34px; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-subtle); }
+.shortcuts dt { flex: 1; color: var(--text-secondary); font-size: 13px; }
+.shortcuts dd { display: inline-flex; gap: 6px; margin: 0; }
+
+
+.signedOut { display: grid; min-height: 100%; place-content: center; justify-items: center; gap: 12px; padding: 40px 20px; color: var(--text-secondary); text-align: center; }
+.signedOut p { margin: 0; }
+
+/* ------------------------------------------------------------------ Narrow frames: the main area is the container */
+
+@container screen-main (max-width: 860px) {
+  .projectRow { grid-template-columns: minmax(0, 1.4fr) 120px 104px minmax(0, 1fr); }
+  .projectLead { display: none; }
+}
+@container screen-main (max-width: 680px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { border-left: 0; }
+  .stat:nth-child(n + 3) { border-top: 1px solid var(--border-subtle); }
+  .rowTag, .rowId { display: none; }
+}
+@container screen-main (max-width: 600px) {
+  .page { padding: 20px 16px 32px; }
+  .pageTitle { font-size: 19px; }
+  .summary { font-size: 13px; }
+  .props { gap: 6px 14px; }
+  .propTeam { display: none; }
+  .viewTabs { padding-bottom: 10px; }
+  .track { grid-template-columns: repeat(var(--pb-count), minmax(136px, 1fr)); margin: 0 -16px; padding: 0 12px; }
+  .rows, .activityList, .projectRows { margin: 0 -8px; }
+  .rowMeta { display: none; }
+  .projectRow { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; min-height: 56px; }
+  .projectProgress, .projectNext { display: none; }
+  .toolbarCount { display: none; }
+  .people { order: 3; }
+  .toolbarEnd { order: 4; }
+  .hint { display: none; }
+  .activitySide .rowTag { display: none; }
+  .stat dd > span { font-size: var(--text-xl); }
+}
+
+@media (hover: none) {
+  .grip { opacity: .6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root *, .root *::before, .root *::after { transition-duration: 0s !important; }
+  .personToggle:active { transform: none; }
+}
