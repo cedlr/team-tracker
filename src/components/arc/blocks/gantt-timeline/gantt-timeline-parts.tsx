@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { Check, Users } from "lucide-react";
-import { avatar, person } from "../../lib/media";
-import type { PersonId } from "../../lib/media";
+import { people as samplePeople } from "../../lib/media";
 import { Avatar } from "../../avatar/avatar";
 import { Badge } from "../../badge/badge";
 import type { BadgeTone } from "../../badge/badge";
@@ -16,9 +15,26 @@ import styles from "./gantt-timeline.module.css";
 
 export const toneVar = (tone?: GanttTone) => ({ "--tone": tone ? `var(--tone-${tone})` : "var(--text-muted)" }) as CSSProperties;
 
+export interface GanttPerson { id: string; name: string; role?: string; src?: string }
+export interface GanttWho { name: string; role: string; src: string }
+
+/** Sample portraits, then a plain fallback so an unknown id never throws. */
+export function sampleWho(id: string): GanttWho {
+  const found = samplePeople.find(entry => entry.id === id);
+  return found ? { name: found.name, role: found.role ?? "", src: found.src } : { name: id, role: "", src: "" };
+}
+
+const WhoContext = createContext<(id: string) => GanttWho>(sampleWho);
+/** team-tracker: real members replace Arc's sample portraits when the timeline is given a roster. */
+export function GanttWhoProvider({ who, children }: { who: (id: string) => GanttWho; children: ReactNode }) {
+  return <WhoContext.Provider value={who}>{children}</WhoContext.Provider>;
+}
+export function useGanttWho() { return useContext(WhoContext); }
+
 /** Arc's Avatar at row size. The name is always written beside it or in the control's label, so it stays out of the accessibility tree. */
-export function Face({ id, size = 20, className }: { id: PersonId; size?: number; className?: string }) {
-  return <Avatar name={person(id).name} src={avatar(id)} size="sm" aria-hidden="true" className={cx(styles.face, className)} style={{ width: size, height: size }} />;
+export function Face({ id, size = 20, className }: { id: string; size?: number; className?: string }) {
+  const who = useGanttWho()(id);
+  return <Avatar name={who.name} src={who.src || undefined} size="sm" aria-hidden="true" className={cx(styles.face, className)} style={{ width: size, height: size }} />;
 }
 
 /** A team is marked by its own icon in its tone, never a coloured dot. */

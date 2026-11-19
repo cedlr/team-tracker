@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { RefObject } from "react";
 import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "motion/react";
 import { CalendarClock, ChartGantt, ChevronDown, CircleUserRound, Crosshair, History, Link2, ListFilter, ListTodo, LogOut, Milestone, Plus, RotateCcw, TriangleAlert, Undo2, Users, X, Check } from "lucide-react";
-import { person } from "../../lib/media";
-import type { PersonId } from "../../lib/media";
 import { motionTokens } from "../../lib/motion-tokens";
 import { Button } from "../../button/button";
 import { Checkbox } from "../../checkbox/checkbox";
@@ -23,7 +21,8 @@ import { DAY, buildLanes, buildPlans, clamp, cx, doneShare, parse, short, toIso 
 import { Chart } from "./gantt-timeline-chart";
 import type { ChartHandle } from "./gantt-timeline-chart";
 import { Details, Summary } from "./gantt-timeline-panel";
-import { Face, MilestoneGlyph, StatusIcon, useCopy } from "./gantt-timeline-parts";
+import { Face, GanttWhoProvider, MilestoneGlyph, StatusIcon, sampleWho, useCopy, useGanttWho } from "./gantt-timeline-parts";
+import type { GanttPerson } from "./gantt-timeline-parts";
 import { ListView, UpdatesView } from "./gantt-timeline-views";
 import styles from "./gantt-timeline.module.css";
 
@@ -58,6 +57,10 @@ export interface GanttTimelineProps {
   onCollapsedChange?: (ids: string[]) => void;
   /** Teams that own tasks. They colour the bars and power grouping by team. */
   teams?: GanttTeam[];
+  /** team-tracker: real people. Owners resolve to these names and photos instead of the sample portraits. */
+  people?: GanttPerson[];
+  /** team-tracker: the signed-in member, for "My tasks" and new bars. */
+  viewerId?: string;
   /** How rows are grouped on first render. */
   defaultGrouping?: GanttGrouping;
   /** Seed entries for the updates feed, newest first. */
@@ -92,7 +95,7 @@ function ShellBridge({ bridgeRef }: { bridgeRef: RefObject<ShellApi | null> }) {
 export function GanttTimeline({
   title = "Atlas 4.0", groups = GROUPS, tasks: tasksProp, defaultTasks = TASKS, onTasksChange, today = TODAY,
   zoom: zoomProp, defaultZoom = "week", onZoomChange, collapsed: collapsedProp, defaultCollapsed = COLLAPSED, onCollapsedChange,
-  teams = TEAMS, defaultGrouping = "phase", updates: seedUpdates = UPDATES, workspace = "Waypoint", className,
+  teams = TEAMS, people: roster, viewerId = ME, defaultGrouping = "phase", updates: seedUpdates = UPDATES, workspace = "Waypoint", className,
 }: GanttTimelineProps) {
   const reduced = useReducedFlag();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -113,7 +116,11 @@ export function GanttTimeline({
   const [view, setView] = useState<View>("timeline");
   const [filter, setFilter] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [owners, setOwners] = useState<PersonId[]>([]);
+  const [owners, setOwners] = useState<string[]>([]);
+  const who = useCallback((id: string) => {
+    const person = roster?.find(entry => entry.id === id);
+    return person ? { name: person.name, role: person.role ?? "", src: person.src ?? "" } : sampleWho(id);
+  }, [roster]);
   const [feed, setFeed] = useState<GanttUpdate[]>(seedUpdates);
   const [unread, setUnread] = useState(Math.min(3, seedUpdates.length));
   const [unreadShown, setUnreadShown] = useState(0);
@@ -139,17 +146,18 @@ export function GanttTimeline({
 
   const plans = useMemo(() => buildPlans(tasks, origin, todayDay, teams), [tasks, origin, todayDay, teams]);
   const planOf = new Map(plans.map(plan => [plan.task.id, plan]));
-  const lanes = useMemo(() => buildLanes(grouping, plans, groups, teams), [grouping, plans, groups, teams]);
+  const lanes = useMemo(() => buildLanes(grouping, plans, groups, teams, id => who(id).name), [grouping, plans, groups, teams, who]);
   const people = useMemo(() => {
-    const list: PersonId[] = [];
+    if (roster?.length) return roster.map(person => person.id);
+    const list: string[] = [];
     defaultTasks.forEach(task => { if (task.assignee && !list.includes(task.assignee)) list.push(task.assignee); });
     return list;
-  }, [defaultTasks]);
+  }, [defaultTasks, roster]);
 
   const q = query.trim().toLowerCase();
   const inFilter = (id: string | null, plan: (typeof plans)[number]) => {
     if (!id) return true;
-    if (id === "view-mine") return plan.task.assignee === ME;
+    if (id === "view-mine") return plan.task.assignee === viewerId;
     if (id === "view-risk") return plan.status === "conflict" || plan.status === "behind";
     if (id === "view-soon") return plan.status !== "done" && plan.start <= todayDay + 13 && plan.start + Math.max(1, plan.len) > todayDay;
     return true;
@@ -251,13 +259,13 @@ export function GanttTimeline({
     const id = `new-${counter}`;
     setCounter(value => value + 1);
     const start = clamp(todayDay, 0, days - 6);
-    const task: GanttTask = { id, name: "Untitled task", group: base?.group ?? "build", team: base?.team ?? "mobile", start: toIso(dateOf(start)), end: toIso(dateOf(start + 4)), progress: 0, assignee: ME };
+    const task: GanttTask = { id, name: "Untitled task", group: base?.group ?? groups[0]?.id ?? "build", team: base?.team ?? teams[0]?.id ?? "mobile", start: toIso(dateOf(start)), end: toIso(dateOf(start + 4)), progress: 0, assignee: viewerId };
     const at = base ? tasks.findIndex(item => item.id === base.id) + 1 : tasks.length;
     lastEdit.current = null;
     write([...tasks.slice(0, at), task, ...tasks.slice(at)], { id, start: task.start, end: task.end, kind: "add" });
     // The new task must be on screen: clear what would hide it and unfold its lane.
     setQuery(""); setOwners([]); setFilter(null);
-    const laneId = grouping === "phase" ? task.group : grouping === "team" ? `team:${task.team}` : `owner:${ME}`;
+    const laneId = grouping === "phase" ? task.group : grouping === "team" ? `team:${task.team}` : `owner:${viewerId}`;
     if (collapsed.includes(laneId)) setCollapsed(collapsed.filter(item => item !== laneId));
     if (view === "updates") setView("timeline");
     setSelectedId(id);
@@ -341,7 +349,7 @@ export function GanttTimeline({
     { id: "milestones", label: "Milestones", icon: Milestone, items: [], content: milestoneList },
     {
       id: "views", label: "Saved views", icon: ListFilter, items: [
-        { id: "view-mine", label: "My tasks", icon: CircleUserRound, count: openCount(plan => plan.task.assignee === ME) },
+        { id: "view-mine", label: "My tasks", icon: CircleUserRound, count: openCount(plan => plan.task.assignee === viewerId) },
         { id: "view-risk", label: "At risk", icon: TriangleAlert, count: openCount(plan => plan.status === "conflict" || plan.status === "behind") },
         { id: "view-soon", label: "Next two weeks", icon: CalendarClock, count: openCount(plan => inFilter("view-soon", plan)) },
       ],
@@ -443,7 +451,7 @@ export function GanttTimeline({
         {view !== "timeline" && <p className={styles.srOnly} role="status" aria-live="polite">{status.text}</p>}
       </motion.div>;
 
-  return <MotionConfig reducedMotion="user">
+  return <GanttWhoProvider who={who}><MotionConfig reducedMotion="user">
     <div ref={rootRef} className={cx(styles.root, className)}>
       <ScreenShell
         aria-label={`${workspace} workspace`}
@@ -464,7 +472,7 @@ export function GanttTimeline({
         activeId={filter ?? view}
         onNavigate={id => navigate(id)}
         account={{
-          name: person(ME).name, detail: "emma@waypoint.studio", avatar: `/media/people/${ME}.svg`,
+          name: who(viewerId).name, detail: who(viewerId).role || "Member", avatar: who(viewerId).src || undefined,
           menu: [
             { id: "reset", label: "Reset the plan", icon: RotateCcw, onSelect: reset },
             { id: "signout", label: "Sign out", icon: LogOut, danger: true, separatorBefore: true, onSelect: () => { setSignedOut(true); setSelectedId(null); } },
@@ -485,7 +493,7 @@ export function GanttTimeline({
         {page}
       </ScreenShell>
     </div>
-  </MotionConfig>;
+  </MotionConfig></GanttWhoProvider>;
 }
 
 /** Header actions read the shell's size, so the phone layout keeps only icons. */
@@ -505,7 +513,8 @@ function HeaderActions({ copied, onShare, onNew }: { copied: boolean | null; onS
 }
 
 /** Owners in a popover: a checkbox per person, so the toolbar keeps one quiet control instead of a row of faces. The count takes the icon's slot, so the trigger never changes width. */
-function OwnerFilter({ people, owners, counts, onChange }: { people: PersonId[]; owners: PersonId[]; counts: Map<PersonId, number>; onChange: (owners: PersonId[]) => void }) {
+function OwnerFilter({ people, owners, counts, onChange }: { people: string[]; owners: string[]; counts: Map<string, number>; onChange: (owners: string[]) => void }) {
+  const who = useGanttWho();
   const active = owners.length > 0;
   return <Popover>
     <PopoverTrigger className={styles.filterButton} data-active={active || undefined} aria-label={active ? `Filter by owner, ${owners.length} selected` : "Filter by owner"}>
@@ -521,9 +530,9 @@ function OwnerFilter({ people, owners, counts, onChange }: { people: PersonId[];
         {people.map(id => {
           const on = owners.includes(id);
           return <label key={id} className={styles.ownerRow}>
-            <Checkbox checked={on} aria-label={person(id).name} onCheckedChange={next => onChange(next === true ? [...owners, id] : owners.filter(item => item !== id))} />
+            <Checkbox checked={on} aria-label={who(id).name} onCheckedChange={next => onChange(next === true ? [...owners, id] : owners.filter(item => item !== id))} />
             <Face id={id} size={20} />
-            <span className={styles.ownerName}>{person(id).name}</span>
+            <span className={styles.ownerName}>{who(id).name}</span>
             <span className={styles.ownerCount}>{counts.get(id) ?? 0}</span>
           </label>;
         })}

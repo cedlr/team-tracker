@@ -8,3 +8,6 @@ body { background: var(--background); color: var(--foreground); font-family: var
 .tt-stack { display: grid; gap: var(--space-6, 24px); }
 .tt-grid { display: grid; gap: var(--space-4, 16px); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .tt-row { display: flex; flex-wrap: wrap; gap: var(--space-3, 12px); align-items: center; }
+.tt-project { height: 100dvh; overflow: auto; }
+.tt-project-board { height: 100dvh; }
+.tt-project-breakdown { padding: 24px; max-width: 960px; }

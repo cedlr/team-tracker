@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import { format, subDays } from "date-fns";
 import { DashboardView } from "@/components/app/dashboard-view";
 import { requireViewer } from "@/lib/session";
-import { getAttendance, getTimeLogs, listLeaves, listMembers, listTasks } from "@/lib/db";
+import { getAttendance, getTimeLogs, listLeaves, listMembers, listProjects, listTasks } from "@/lib/db";
 import { utilizationFor, workdays } from "@/lib/utilization";
+import { teamActivity } from "@/lib/activity";
+import { avatarSrc } from "@/lib/avatar";
+import { zonedISODate } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const { team } = await requireViewer();
-  const now = new Date();
-  const today = format(now, "yyyy-MM-dd");
+  const today = zonedISODate();
+  const now = new Date(`${today}T12:00:00Z`);
   const from14 = format(subDays(now, 13), "yyyy-MM-dd");
   const from90 = format(subDays(now, 89), "yyyy-MM-dd");
-  const [members, tasks, leaves] = await Promise.all([listMembers(team.id), listTasks({ teamId: team.id }), listLeaves(team.id)]);
+  const [members, tasks, leaves, projects] = await Promise.all([listMembers(team.id), listTasks({ teamId: team.id }), listLeaves(team.id), listProjects(team.id)]);
   const ids = members.map(m => m.id);
   const [attendance, logs] = await Promise.all([getAttendance(ids, from90, today), getTimeLogs(ids, from14, today)]);
 
@@ -51,5 +54,7 @@ export default async function DashboardPage() {
     hoursPeriod: `${format(subDays(now, 13), "MMM d")} – ${format(now, "MMM d, yyyy")}`,
     checkIns,
     checkInPeriod: "the last 90 days",
+    today,
+    activity: teamActivity({ today, teamId: team.id, teamName: team.name, members, projects, tasks, leaves, attendance, avatarOf: member => avatarSrc(member.avatar) }),
   }} />;
 }

@@ -34,6 +34,8 @@ export interface LoginSplitProps {
   brand?: string;
   /** team-tracker: shows the "No account? Sign up" link. Default true. */
   showSignUp?: boolean;
+  /** team-tracker: shows "Forgot password?". Default true. */
+  showForgotPassword?: boolean;
 }
 type StepCustom = { direction: number; reduce: boolean };
 
@@ -151,7 +153,7 @@ function useStepHeight(step: Step, reduce: boolean) {
   return { track, height };
 }
 
-export function LoginSplit({ fullScreen = false, demoPassword = "arc-demo", links, onSignIn, verifyPassword, providers = defaultProviders, brand = "Arc", showSignUp = true }: LoginSplitProps) {
+export function LoginSplit({ fullScreen = false, demoPassword = "arc-demo", links, onSignIn, verifyPassword, providers = defaultProviders, brand = "Arc", showSignUp = true, showForgotPassword = true }: LoginSplitProps) {
   const errorId = useId();
   const reduce = !!useReducedMotion();
   const [step, setStep] = useState<Step>("email");
@@ -355,13 +357,13 @@ export function LoginSplit({ fullScreen = false, demoPassword = "arc-demo", link
                       <div className={styles.fieldGroup}>
                         <div ref={fieldRef} className={styles.passwordField}>
                           <PasswordField ref={passwordRef} label="Password" name="password" autoComplete="current-password" description={verifyPassword ? undefined : `For this demo, the password is ${demoPassword}.`} value={password} readOnly={submit !== "idle"} aria-invalid={passwordError ? true : undefined} aria-describedby={passwordError ? errorId : undefined} onChange={event => { setPassword(event.target.value); if (passwordError) setPasswordError(""); }} />
-                          <button type="button" className={styles.forgot} aria-disabled={reset !== "idle" || undefined} onClick={forgot}>
+                          {showForgotPassword && <button type="button" className={styles.forgot} aria-disabled={reset !== "idle" || undefined} onClick={forgot}>
                             <AnimatePresence mode="popLayout" initial={false}>
                               <motion.span key={reset} className={styles.forgotLabel} {...swap(reduce)}>
                                 {reset === "idle" ? "Forgot password?" : reset === "sending" ? "Sending link" : <><Check size={14} strokeWidth={2} aria-hidden="true" />Link sent</>}
                               </motion.span>
                             </AnimatePresence>
-                          </button>
+                          </button>}
                         </div>
                         <AnimatePresence initial={false}>
                           {passwordError && <motion.div key="error" className={styles.row} {...expand(reduce)}><p id={errorId} className={styles.error} role="alert">{passwordError}</p></motion.div>}

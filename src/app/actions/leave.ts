@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
 import { requireViewer } from "@/lib/session";
-import { getLeave, saveLeave, setAttendanceDay } from "@/lib/db";
+import { getLeave, removeLeave, saveLeave, setAttendanceDay } from "@/lib/db";
 import { leaveDecisionInput, leaveRequestInput } from "@/lib/schemas";
 import { workdays } from "@/lib/utilization";
 
@@ -16,7 +16,7 @@ export async function requestLeave(input: unknown) {
   const leave = await saveLeave({
     id: randomUUID(), teamId: team.id, memberId: member.id, ...parsed.data, days, status: "pending", createdAt: new Date().toISOString(),
   });
-  revalidatePath("/leave"); revalidatePath("/calendar"); revalidatePath("/people");
+  revalidatePath("/", "layout");
   return { ok: true as const, leave };
 }
 
@@ -34,6 +34,17 @@ export async function decideLeave(input: unknown) {
     const at = new Date().toISOString();
     for (const day of workdays(leave.from, leave.to)) await setAttendanceDay(leave.memberId, day, { status: "leave", teamId: team.id, at });
   }
-  revalidatePath("/leave"); revalidatePath("/calendar"); revalidatePath("/people"); revalidatePath("/utilization");
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** The requester can cancel their own pending request. Leads can remove any request in the team. */
+export async function cancelLeave(id: string) {
+  const { member, team, isLead } = await requireViewer();
+  const leave = await getLeave(id);
+  if (!leave || leave.teamId !== team.id) return { ok: false as const, error: "Request not found in this team." };
+  if (!isLead && (leave.memberId !== member.id || leave.status !== "pending")) return { ok: false as const, error: "Only a lead can remove that request." };
+  await removeLeave(id);
+  revalidatePath("/", "layout");
   return { ok: true as const };
 }

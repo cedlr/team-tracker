@@ -10,7 +10,8 @@ import { AnimatedCounter } from "../../animated-counter/animated-counter";
 import SegmentedControl from "../../segmented-control/segmented-control";
 import { TextMorph } from "../../text-morph/text-morph";
 import { motionTokens } from "../../lib/motion-tokens";
-import { person, photo } from "../../lib/media";
+import { people, photo } from "../../lib/media";
+import { Avatar } from "../../avatar/avatar";
 import { activities, activityToday, incomingActivities } from "./activity-feed-data";
 import type { Activity, ActivityDetail, ActivityType } from "./activity-feed-data";
 import styles from "./activity-feed.module.css";
@@ -92,8 +93,14 @@ function Detail({ detail }: { detail: ActivityDetail }) {
   </div>;
 }
 
+function actorOf(actor: Activity["actor"]) {
+  if (typeof actor !== "string") return { name: actor.name, src: actor.src };
+  const known = people.find(entry => entry.id === actor);
+  return { name: known?.name ?? actor, src: known?.src };
+}
+
 function Row({ item, open, sweepDelay, onToggle, reduce }: { item: Activity; open: boolean; sweepDelay?: number; onToggle: () => void; reduce: boolean }) {
-  const actor = person(item.actor);
+  const actor = actorOf(item.actor);
   const Icon = typeIcon[item.type];
   const detailId = `${useId()}-detail`;
   const preview = item.detail?.kind === "comment" ? item.detail.text : item.detail?.kind === "deploy" ? item.detail.commit : item.detail?.kind === "diff" ? item.detail.file : undefined;
@@ -110,7 +117,7 @@ function Row({ item, open, sweepDelay, onToggle, reduce }: { item: Activity; ope
     initial={reduce ? { opacity: 0 } : { opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
     transition={reduce ? { duration: motionTokens.duration.instant } : { layout: motionTokens.spring.smooth, y: motionTokens.spring.smooth, opacity: { duration: motionTokens.duration.standard } }}>
     <span className={styles.avatar}>
-      <Image src={actor.src} alt={actor.name} width={32} height={32} />
+      <Avatar name={actor.name} src={actor.src} size="sm" />
       <span className={styles.badge} data-tone={tone(item)} aria-hidden="true"><Icon size={10} strokeWidth={2.25} /></span>
     </span>
     <div className={styles.body}>
@@ -235,7 +242,7 @@ export function ActivityFeed({ items: initialItems = activities, incoming = inco
           <div className={styles.incomingInner}>
             <button type="button" className={styles.pill} onClick={showPending}>
               <span className={styles.stack} aria-hidden="true">
-                <AnimatePresence initial={false}>{pending.slice(0, 3).map(item => { const actor = person(item.actor); return <motion.span key={item.id} className={styles.stackItem} layout={!reduce} initial={reduce ? { opacity: 0 } : { opacity: 0, scale: .6 }} animate={{ opacity: 1, scale: 1 }} transition={reduce ? { duration: 0 } : motionTokens.spring.snappy}><Image src={actor.src} alt="" width={22} height={22} /></motion.span>; })}</AnimatePresence>
+                <AnimatePresence initial={false}>{pending.slice(0, 3).map(item => { const actor = actorOf(item.actor); return <motion.span key={item.id} className={styles.stackItem} layout={!reduce} initial={reduce ? { opacity: 0 } : { opacity: 0, scale: .6 }} animate={{ opacity: 1, scale: 1 }} transition={reduce ? { duration: 0 } : motionTokens.spring.snappy}><Avatar name={actor.name} src={actor.src} size="sm" /></motion.span>; })}</AnimatePresence>
               </span>
               <span className={styles.pillText}><span className={styles.inherit}><AnimatedCounter value={pending.length} /></span>&nbsp;new&nbsp;<TextMorph>{pending.length === 1 ? "update" : "updates"}</TextMorph></span>
               <ArrowUp size={14} aria-hidden="true" />

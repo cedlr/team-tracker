@@ -3,11 +3,10 @@
 import { useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { person } from "../../lib/media";
 import type { GanttTeam, GanttUpdate } from "./gantt-timeline-data";
 import type { Lane, Plan } from "./gantt-timeline-model";
 import { DAY, short } from "./gantt-timeline-model";
-import { Face, LinkMark, MilestoneGlyph, StatusBadge, StatusIcon, TeamIcon, toneVar } from "./gantt-timeline-parts";
+import { Face, LinkMark, MilestoneGlyph, StatusBadge, StatusIcon, TeamIcon, toneVar, useGanttWho } from "./gantt-timeline-parts";
 import styles from "./gantt-timeline.module.css";
 
 type SortKey = "name" | "start" | "due" | "progress";
@@ -30,6 +29,7 @@ interface ListProps {
 
 /** The same plan as a table: grouped like the timeline, sortable by any column, one tab stop with arrow keys between rows. */
 export function ListView({ lanes, visible, teams, origin, selectedId, onSelect, onScroll }: ListProps) {
+  const who = useGanttWho();
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "start", dir: 1 });
   const [focusId, setFocusId] = useState<string | null>(null);
   const rows = useRef(new Map<string, HTMLButtonElement>());
@@ -93,7 +93,7 @@ export function ListView({ lanes, visible, teams, origin, selectedId, onSelect, 
             <td className={styles.colProgress}>
               {plan.task.milestone ? null : <span className={styles.listProgress}><span className={styles.listMeter} style={{ "--value": `${pct}%`, ...toneVar(plan.tone) } as CSSProperties} /><span className={styles.num}>{pct}%</span></span>}
             </td>
-            <td className={styles.colOwner}>{plan.task.assignee && <span className={styles.listOwner}><Face id={plan.task.assignee} size={20} /><span>{person(plan.task.assignee).name}</span></span>}</td>
+            <td className={styles.colOwner}>{plan.task.assignee && <span className={styles.listOwner}><Face id={plan.task.assignee} size={20} /><span>{who(plan.task.assignee).name}</span></span>}</td>
             <td className={styles.colStatus}><StatusBadge status={plan.status} label={plan.task.milestone && plan.status === "done" ? "Reached" : undefined} /></td>
           </tr>;
         })}
@@ -111,15 +111,16 @@ interface UpdatesProps {
 }
 
 export function UpdatesView({ updates, unread, plans, onOpen, onScroll }: UpdatesProps) {
+  const who = useGanttWho();
   return <div className={styles.listScroll} data-fade="y" onScroll={event => onScroll(event.currentTarget)} ref={node => { if (node) onScroll(node); }}>
     <ol className={styles.feed}>
       {updates.map((update, index) => {
         const plan = update.task ? plans.find(item => item.task.id === update.task) : undefined;
-        const who = update.person ? person(update.person).name : "You";
+        const name = update.person ? who(update.person).name : "You";
         const body = <>
           <Face id={update.person ?? "emma-collins"} size={28} />
           <span className={styles.feedText}>
-            <span><span className={styles.activityWho}>{who}</span> {update.text}</span>
+            <span><span className={styles.activityWho}>{name}</span> {update.text}</span>
             {plan && <span className={styles.feedTask}><StatusIcon status={plan.status} size={12} />{plan.task.name}</span>}
           </span>
           <span className={styles.feedAt}>{update.at}</span>

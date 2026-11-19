@@ -5,7 +5,9 @@ import * as Menu from "@radix-ui/react-dropdown-menu";
 import { AnimatePresence, LayoutGroup, animate, motion, useAnimate, useIsPresent, useMotionValue, useReducedMotion } from "motion/react";
 import { Check, ChevronDown, Copy, Lock, RotateCcw, Trash2 } from "lucide-react";
 import { AnimatedCounter } from "../../animated-counter/animated-counter";
+import { Avatar } from "../../avatar/avatar";
 import { AvatarGroup, type AvatarGroupMember } from "../../avatar-group/avatar-group";
+import { Select } from "../../select/select";
 import { Button } from "../../button/button";
 import { TextMorph } from "../../text-morph/text-morph";
 import { motionTokens } from "../../lib/motion-tokens";
@@ -209,23 +211,59 @@ function RoleHeader({ role, isNew, dirty, canRevert, nav, onDuplicate, onRevert,
   </Menu.Root>;
 }
 
+export interface MemberRole { id: string; name: string; email: string; avatar?: string; role: "admin" | "lead" | "member" }
+
+const APP_ROLE_IDS = ["admin", "lead", "member"] as const;
+function teamSnapshot(members: MemberRole[], saved?: Grants): Snapshot {
+  const of = (role: MemberRole["role"]) => members.filter(member => member.role === role).map(member => member.name);
+  const roles: Role[] = APP_ROLE_IDS.map(role => ({
+    id: role, name: role.charAt(0).toUpperCase() + role.slice(1), people: of(role).length,
+    who: of(role).length ? listNames(of(role)) : undefined, locked: role === "admin",
+  }));
+  const all = PERMISSIONS.map(permission => permission.id);
+  const preset: Record<string, string[]> = {
+    admin: all,
+    lead: all.filter(id => !["payment", "plan", "sso", "api-keys"].includes(id)),
+    member: ["view-projects"],
+  };
+  const grants: Grants = {};
+  for (const role of roles) {
+    const base = Object.fromEntries(all.map(permission => [permission, preset[role.id].includes(permission)]));
+    grants[role.id] = { ...base, ...saved?.[role.id] };
+  }
+  return { roles, grants };
+}
+
 export interface RolesPermissionsProps {
   /** The workspace named in the summary line. */
   workspace?: string;
+  /** team-tracker: real members and their team role. */
+  members?: MemberRole[];
+  /** team-tracker: last saved permission matrix. */
+  grants?: Grants;
+  /** team-tracker: persists a member's admin, lead or member role. */
+  onMemberRole?: (memberId: string, role: MemberRole["role"]) => Promise<{ ok: boolean; error?: string }>;
+  /** team-tracker: persists the permission matrix. */
+  onSave?: (grants: Grants) => Promise<{ ok: boolean; error?: string }>;
 }
 
-export function RolesPermissions({ workspace = "Kestrel Analytics" }: RolesPermissionsProps = {}) {
+export function RolesPermissions({ workspace = "Kestrel Analytics", members, grants: savedGrants, onMemberRole, onSave }: RolesPermissionsProps = {}) {
+  const initial = members ? teamSnapshot(members, savedGrants) : START;
   const id = useId();
   const reduce = !!useReducedMotion();
-  const [saved, setSaved] = useState<Snapshot>(START);
-  const [roles, setRoles] = useState<Role[]>(START.roles);
-  const [grants, setGrants] = useState<Grants>(START.grants);
+  const [saved, setSaved] = useState<Snapshot>(initial);
+  const [roles, setRoles] = useState<Role[]>(initial.roles);
+  const [grants, setGrants] = useState<Grants>(initial.grants);
+  const [assigned, setAssigned] = useState<MemberRole[]>(members ?? []);
+  const signature = (members ?? []).map(member => `${member.id}:${member.role}`).join("|");
+  const [seen, setSeen] = useState(signature);
+  if (members && seen !== signature) { setSeen(signature); setAssigned(members); }
   const [seeds, setSeeds] = useState<Grants>({});
   const [wave, setWave] = useState<Record<string, number>>({});
   const [open, setOpen] = useState<Record<string, boolean>>(OPEN);
   const [phase, setPhase] = useState<Phase>("idle");
   const [status, setStatus] = useState("");
-  const [cursor, setCursor] = useState(`head:${START.roles[0].id}`);
+  const [cursor, setCursor] = useState(`head:${initial.roles[0].id}`);
   const innerRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -375,12 +413,17 @@ export function RolesPermissions({ workspace = "Kestrel Analytics" }: RolesPermi
     const count = change.count;
     setPhase("saving");
     setStatus(`Saving ${plural(count, "change")}`);
-    schedule(() => {
+    const finish = () => {
       setSaved(snapshot);
       setPhase("saved");
       setStatus(`Saved ${plural(count, "change")}.`);
       schedule(() => setPhase("idle"), 1600);
-    }, 900);
+    };
+    if (!onSave) { schedule(finish, 900); return; }
+    void onSave(grants).then(result => {
+      if (!result.ok) { setPhase("idle"); setStatus(result.error ?? "Could not save"); return; }
+      finish();
+    }).catch(() => { setPhase("idle"); setStatus("Could not save"); });
   }
 
   function discard() {
@@ -417,10 +460,27 @@ export function RolesPermissions({ workspace = "Kestrel Analytics" }: RolesPermi
         <header className={styles.header}>
           <div className={styles.heading}>
             <h2 id={`${id}-title`}>Roles and permissions</h2>
-            <p className={styles.summary}>{workspace} · <span className={styles.count}>28</span> members across <span className={styles.count}><AnimatedCounter value={roles.length} /></span> roles</p>
+            <p className={styles.summary}>{workspace} · <span className={styles.count}>{members ? members.length : 28}</span> members across <span className={styles.count}><AnimatedCounter value={roles.length} /></span> roles</p>
           </div>
-          <AvatarGroup members={MEMBERS} max={4} size="sm" label="Workspace members" />
+          <AvatarGroup members={members ? members.map(member => ({ name: member.name, src: member.avatar })) : MEMBERS} max={4} size="sm" label="Workspace members" />
         </header>
+        {!!members && <ul className={styles.members}>
+          {assigned.map(person => <li key={person.id} className={styles.memberRow}>
+            <Avatar name={person.name} src={person.avatar} size="sm" />
+            <span className={styles.memberName}><span>{person.name}</span><span className={styles.memberEmail}>{person.email}</span></span>
+            <Select className={styles.memberRole} label={`Role for ${person.name}`} value={person.role}
+              options={[{ value: "admin", label: "Admin" }, { value: "lead", label: "Lead" }, { value: "member", label: "Member" }]}
+              onValueChange={value => {
+                const role = value as MemberRole["role"];
+                const previous = person.role;
+                setAssigned(list => list.map(item => item.id === person.id ? { ...item, role } : item));
+                void onMemberRole?.(person.id, role).then(result => {
+                  if (result && !result.ok) { setAssigned(list => list.map(item => item.id === person.id ? { ...item, role: previous } : item)); setStatus(result.error ?? "Could not change the role"); return; }
+                  setStatus(`${person.name.split(" ")[0]} is now ${role}`);
+                });
+              }} />
+          </li>)}
+        </ul>}
 
         <div ref={scrollerRef} className={styles.scroller} onScroll={event => event.currentTarget.toggleAttribute("data-scrolled", event.currentTarget.scrollLeft > 1)}>
           <div ref={innerRef} role="grid" aria-labelledby={`${id}-title`} className={styles.grid}

@@ -3,12 +3,16 @@ import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { kv } from "./kv";
 import { keys } from "./keys";
 import {
-  attendanceDaySchema, leaveSchema, memberSchema, projectSchema, taskSchema, teamSchema, timeEntrySchema,
-  type AttendanceDay, type Leave, type Member, type Project, type PublicMember, type Task, type Team, type TimeEntry,
+  attendanceDaySchema, calendarEventSchema, leaveSchema, memberSchema, projectSchema, taskSchema, teamSchema, timeEntrySchema,
+  type AttendanceDay, type CalendarEventRecord, type Leave, type Member, type Project, type PublicMember, type Task, type Team, type TimeEntry,
 } from "./schemas";
 
 const compact = <T,>(values: (T | null)[]) => values.filter((value): value is T => value != null);
-const strip = ({ passwordHash: _hash, ...rest }: Member): PublicMember => rest;
+const strip = (member: Member): PublicMember => {
+  const copy = { ...member };
+  delete copy.passwordHash;
+  return copy;
+};
 
 /* Teams */
 export async function listTeams(): Promise<Team[]> {
@@ -25,6 +29,8 @@ export async function saveTeam(team: Team) {
 
 /* Members */
 export async function getMember(id: string) { const member = await kv.get<Member>(keys.member(id)); return member ? strip(member) : null; }
+/** Full record, including the password hash. For profile and password updates. */
+export const getMemberRecord = (id: string) => kv.get<Member>(keys.member(id));
 /** Includes the password hash; only for sign in. */
 export async function getMemberForLogin(email: string) {
   const id = await kv.get<string>(keys.memberByEmail(email));
@@ -87,6 +93,30 @@ export async function saveLeave(leave: Leave) {
   await kv.set(keys.leave(value.id), value);
   await kv.sadd(keys.teamLeaves(value.teamId), value.id);
   return value;
+}
+export async function removeLeave(id: string) {
+  const leave = await getLeave(id);
+  if (!leave) return;
+  await kv.del(keys.leave(id));
+  await kv.srem(keys.teamLeaves(leave.teamId), id);
+}
+
+/* Calendar events that are not leave or a task due date: holidays, deadlines, focus blocks. */
+export async function listEvents(teamId: string): Promise<CalendarEventRecord[]> {
+  const ids = await kv.smembers(keys.teamEvents(teamId));
+  return compact(await kv.mget<CalendarEventRecord>(ids.map(keys.event))).sort((a, b) => a.start.localeCompare(b.start));
+}
+export async function saveEvent(event: CalendarEventRecord) {
+  const value = calendarEventSchema.parse(event);
+  await kv.set(keys.event(value.id), value);
+  await kv.sadd(keys.teamEvents(value.teamId), value.id);
+  return value;
+}
+export async function removeEvent(id: string) {
+  const event = await kv.get<CalendarEventRecord>(keys.event(id));
+  if (!event) return;
+  await kv.del(keys.event(id));
+  await kv.srem(keys.teamEvents(event.teamId), id);
 }
 
 /* Attendance: att:{member}:{yyyy-mm}, field = day "01".."31" */

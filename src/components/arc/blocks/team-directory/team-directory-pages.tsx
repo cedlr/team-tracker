@@ -9,11 +9,10 @@ import { Badge } from "../../badge/badge";
 import { Button } from "../../button/button";
 import { CopyButton } from "../../copy-button/copy-button";
 import { Kbd } from "../../kbd/kbd";
-import { directoryNow, offices } from "./team-directory-data";
 import type { DirectoryPerson, Office, Team, TimeOffRequest } from "./team-directory-data";
 import {
-  Face, GitHubMark, LinkedInMark, Picker, PickerChevron, SlackMark, StatusLabel, TeamIcon, clock, cx, dateRange, dayIndex, instant,
-  localMinutes, longDate, overlapHours, shortDate, statusOf, tenure, toneOf, toneVar, useEdgeFade,
+  Face, GitHubMark, LinkedInMark, Picker, PickerChevron, SlackMark, StatusLabel, TeamIcon, calendarDay, clock, cx, dateRange, dayIndex, instant,
+  localMinutes, longDate, overlapHours, shortDate, statusOf, tenure, toneOf, toneVar, useDirectoryClock, useEdgeFade,
 } from "./team-directory-parts";
 import styles from "./team-directory.module.css";
 
@@ -67,6 +66,7 @@ interface PeopleViewProps {
 }
 
 export function PeopleGrid({ groups, selectedId, showSelection, favorites, statusFor, onSelect, onOpen }: PeopleViewProps & { groups: PeopleGroup[] }) {
+  const { now } = useDirectoryClock();
   const ref = useRef<HTMLDivElement>(null);
   const flat = groups.flatMap(group => group.people);
   const focusId = flat.some(person => person.id === selectedId) ? selectedId : flat[0]?.id;
@@ -92,7 +92,7 @@ export function PeopleGrid({ groups, selectedId, showSelection, favorites, statu
               </span>
             </span>
             <span className={styles.cardFoot}>
-              <span className={styles.cardPlace}>{person.city ?? person.office}<span className={styles.cardTime}>{clock(localMinutes(person))}</span></span>
+              <span className={styles.cardPlace}>{person.city ?? person.office}<span className={styles.cardTime}>{clock(localMinutes(person, now))}</span></span>
               <StatusLabel status={status} className={styles.cardStatus} short />
             </span>
           </button>;
@@ -110,6 +110,7 @@ export interface SortState { key: SortKey; dir: 1 | -1 }
 export function PeopleList({ people, selectedId, showSelection, favorites, statusFor, onSelect, onOpen, sort, onSort, managerName }: PeopleViewProps & {
   people: DirectoryPerson[]; sort: SortState; onSort: (key: SortKey) => void; managerName: (id?: string) => string;
 }) {
+  const { now } = useDirectoryClock();
   const ref = useRef<HTMLTableSectionElement>(null);
   const scrollRef = useEdgeFade<HTMLDivElement>("x");
   const focusId = people.some(person => person.id === selectedId) ? selectedId : people[0]?.id;
@@ -150,7 +151,7 @@ export function PeopleList({ people, selectedId, showSelection, favorites, statu
               </span>
             </td>
             <td className={styles.colTeam}><span className={styles.inline}><TeamIcon team={person.team} />{person.team}</span></td>
-            <td className={styles.colOffice}><span className={styles.inline}>{person.city ?? person.office}<span className={styles.cardTime}>{clock(localMinutes(person))}</span></span></td>
+            <td className={styles.colOffice}><span className={styles.inline}>{person.city ?? person.office}<span className={styles.cardTime}>{clock(localMinutes(person, now))}</span></span></td>
             <td className={styles.colStatus}><StatusLabel status={status} short /></td>
             <td className={cx(styles.colManager, styles.muted)}>{managerName(person.managerId)}</td>
             <td className={cx(styles.colStarted, styles.muted, styles.num)}>{shortDate(person.started)} {person.started.slice(0, 4)}</td>
@@ -211,15 +212,16 @@ export function OrgChart({ people, selectedId, showSelection, onSelect, onOpen, 
 
 /* ------------------------------------------------------------------ Time off */
 
-const WINDOW_START = dayIndex("2026-11-09");
 const WINDOW_DAYS = 28;
-const TODAY = Math.floor(directoryNow / 86400000);
 
 export function TimeOffPage({ requests, people, onDecide, onSelect, onOpen }: {
   requests: TimeOffRequest[]; people: DirectoryPerson[]; onDecide: (id: string, decision: "approve" | "decline") => void;
   onSelect: (id: string) => void; onOpen: (id: string) => void;
 }) {
   const reduce = useReducedMotion();
+  const { now, timeZone } = useDirectoryClock();
+  const TODAY = calendarDay(now, timeZone);
+  const WINDOW_START = TODAY - ((new Date(TODAY * 86400000).getUTCDay() + 6) % 7);
   const byId = (id: string) => people.find(person => person.id === id)!;
   const pending = requests.filter(request => request.status === "pending");
   const upcoming = requests.filter(request => request.status === "approved" && dayIndex(request.to) >= TODAY).sort((a, b) => dayIndex(a.from) - dayIndex(b.from));
@@ -324,18 +326,20 @@ export function ProfilePanel(props: {
 }
 
 function Profile({ person, people, viewer, viewerAway, favorite, timeOff, onToggleFavorite, onSelect, onManagerChange }: Parameters<typeof ProfilePanel>[0]) {
+  const { now, timeZone } = useDirectoryClock();
+  const today = calendarDay(now, timeZone);
   const reduce = useReducedMotion();
   const [composing, setComposing] = useState(false);
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState<string | null>(null);
-  const status = statusOf(person, viewerAway, viewer.id);
+  const status = statusOf(person, viewerAway, viewer.id, now);
   const manager = people.find(entry => entry.id === person.managerId);
   const reports = people.filter(entry => entry.managerId === person.id);
   const isViewer = person.id === viewer.id;
   const descendants = (id: string): string[] => people.filter(p => p.managerId === id).flatMap(child => [child.id, ...descendants(child.id)]);
   const blocked = new Set([person.id, ...descendants(person.id)]);
   const managerOptions = people.filter(entry => !blocked.has(entry.id)).map(entry => ({ value: entry.id, label: entry.name, detail: entry.role, photo: entry.photo }));
-  const away = timeOff.filter(request => request.personId === person.id && request.status === "approved" && dayIndex(request.to) >= TODAY);
+  const away = timeOff.filter(request => request.personId === person.id && request.status === "approved" && dayIndex(request.to) >= today);
   const first = person.name.split(" ")[0];
 
   const send = () => {
@@ -406,7 +410,7 @@ function Profile({ person, people, viewer, viewerAway, favorite, timeOff, onTogg
       <div><dt>Office</dt><dd>{person.city ? `${person.city}, remote` : person.office}</dd></div>
       <div><dt>Email</dt><dd className={styles.ellipsis}>{person.email}</dd></div>
       <div><dt>Phone</dt><dd className={cx(styles.num, !person.phone && styles.muted)}>{person.phone ?? "Not added"}</dd></div>
-      <div><dt>Started</dt><dd>{longDate(person.started)}<span className={styles.muted}>{tenure(person.started)}</span></dd></div>
+      <div><dt>Started</dt><dd>{longDate(person.started)}<span className={styles.muted}>{tenure(person.started, now)}</span></dd></div>
     </dl>
 
     {away.length > 0 && <section className={styles.profileBlock}>
@@ -441,6 +445,7 @@ function Profile({ person, people, viewer, viewerAway, favorite, timeOff, onTogg
 
 /** Working hours on a 24 hour strip in the viewer's time zone, with the shared hours and the current time marked. */
 function Hours({ person, viewer }: { person: DirectoryPerson; viewer: DirectoryPerson }) {
+  const { now, offices } = useDirectoryClock();
   const shift = viewer.utcOffset - person.utcOffset;
   const segs = (start: number, end: number) => {
     const a = ((start % 24) + 24) % 24, b = a + (end - start);
@@ -448,7 +453,7 @@ function Hours({ person, viewer }: { person: DirectoryPerson; viewer: DirectoryP
   };
   const theirs = segs(person.hours[0] + shift, person.hours[1] + shift);
   const mine = segs(viewer.hours[0], viewer.hours[1]);
-  const now = localMinutes(viewer) / 60;
+  const nowHour = localMinutes(viewer, now) / 60;
   const shared = overlapHours(person, viewer);
   const isViewer = person.id === viewer.id;
   const officeLabel = offices.find(entry => entry.id === viewer.office)?.label ?? viewer.office;
@@ -458,11 +463,11 @@ function Hours({ person, viewer }: { person: DirectoryPerson; viewer: DirectoryP
       <h3 className={styles.profileHeading}>Working hours</h3>
       <span className={styles.hoursNote}>{isViewer ? "Your day" : shared > 0 ? `${shared}h overlap with you` : "No overlap with you"}</span>
     </div>
-    <p className={styles.hoursLine}>{clock(person.hours[0] * 60)} to {clock(person.hours[1] * 60)} in {person.city ?? person.office}<span className={styles.muted}>, {clock(localMinutes(person))} now</span></p>
+    <p className={styles.hoursLine}>{clock(person.hours[0] * 60)} to {clock(person.hours[1] * 60)} in {person.city ?? person.office}<span className={styles.muted}>, {clock(localMinutes(person, now))} now</span></p>
     <div className={styles.hoursChart} aria-hidden="true">
       <span className={styles.hoursLabel}>{isViewer ? "You" : person.name.split(" ")[0]}</span>
-      <span className={styles.hoursTrack}>{bar(theirs, "them")}<span className={styles.hoursNow} style={{ left: `${(now / 24) * 100}%` }} /></span>
-      {!isViewer && <><span className={styles.hoursLabel}>You</span><span className={styles.hoursTrack}>{bar(mine, "you")}<span className={styles.hoursNow} style={{ left: `${(now / 24) * 100}%` }} /></span></>}
+      <span className={styles.hoursTrack}>{bar(theirs, "them")}<span className={styles.hoursNow} style={{ left: `${(nowHour / 24) * 100}%` }} /></span>
+      {!isViewer && <><span className={styles.hoursLabel}>You</span><span className={styles.hoursTrack}>{bar(mine, "you")}<span className={styles.hoursNow} style={{ left: `${(nowHour / 24) * 100}%` }} /></span></>}
       <span />
       <span className={styles.hoursTicks}><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></span>
     </div>

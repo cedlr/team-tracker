@@ -12,6 +12,8 @@ export const teamSchema = z.object({
   tone: toneSchema.default("teal"),
   /** Prefix for task keys, such as "WEB". */
   key: z.string().min(2).max(5),
+  /** Saved roles-and-permissions matrix: role id -> permission id -> granted. */
+  grants: z.record(z.string(), z.record(z.string(), z.boolean())).optional(),
 });
 
 export const membershipSchema = z.object({
@@ -33,6 +35,9 @@ export const memberSchema = z.object({
   weeklyCapacityHours: z.number().min(0).max(80).default(40),
   managerId: z.string().optional(),
   started: isoDate,
+  location: z.string().max(80).optional(),
+  website: z.string().max(120).optional(),
+  bio: z.string().max(200).optional(),
   isAdmin: z.boolean().default(false),
   memberships: z.array(membershipSchema).min(1),
 });
@@ -89,6 +94,8 @@ export const attendanceDaySchema = z.object({
   status: attendanceStatusSchema,
   teamId: z.string(),
   at: z.string(),
+  /** Set when the member checks out. Absent until then. */
+  outAt: z.string().optional(),
 });
 
 /** One field per task in time:{memberId}:{yyyy-mm-dd}: hours logged. */
@@ -118,7 +125,10 @@ export const taskInput = z.object({
   priority: taskSchema.shape.priority.optional(),
   assigneeId: z.string().optional(),
   points: z.number().min(0).max(100).optional(),
-  due: isoDate.optional(),
+  estimateHours: z.number().min(0).max(1000).optional(),
+  start: isoDate.optional(),
+  /** Null clears a due date. */
+  due: isoDate.nullable().optional(),
   order: z.number().optional(),
 });
 export const leaveRequestInput = z.object({
@@ -128,3 +138,43 @@ export const leaveRequestInput = z.object({
   note: z.string().max(500).optional(),
 }).refine(value => value.from <= value.to, { message: "The end date is before the start date", path: ["to"] });
 export const leaveDecisionInput = z.object({ id: z.string(), decision: z.enum(["approve", "decline"]) });
+
+export const calendarKindSchema = z.enum(["holiday", "deadline", "focus"]);
+export const calendarEventSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string(),
+  title: z.string().min(1).max(200),
+  kind: calendarKindSchema,
+  start: isoDate,
+  end: isoDate.optional(),
+  createdBy: z.string(),
+});
+export type CalendarKind = z.infer<typeof calendarKindSchema>;
+export type CalendarEventRecord = z.infer<typeof calendarEventSchema>;
+
+export const profileInput = z.object({
+  name: z.string().trim().min(1).max(80),
+  title: z.string().trim().max(80),
+  location: z.string().trim().max(80).optional(),
+  website: z.string().trim().max(120).optional(),
+  bio: z.string().trim().max(200).optional(),
+});
+export const passwordInput = z.object({
+  currentPassword: z.string().min(1).max(200),
+  nextPassword: z.string().min(8).max(200),
+});
+export const inviteInput = z.object({
+  email: z.string().email(),
+  name: z.string().trim().min(1).max(80).optional(),
+  role: z.enum(["admin", "lead", "member"]).default("member"),
+});
+export const roleChangeInput = z.object({
+  memberId: z.string().min(1),
+  role: z.enum(["admin", "lead", "member"]),
+});
+export const teamNameInput = z.object({ name: z.string().trim().min(1).max(60) });
+export const logHoursInput = z.object({
+  taskId: z.string().min(1),
+  date: isoDate.optional(),
+  hours: z.number().min(0.5).max(24),
+});

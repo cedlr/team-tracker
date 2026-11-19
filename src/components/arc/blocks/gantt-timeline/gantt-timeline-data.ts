@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import { Megaphone, PenTool, Server, Smartphone } from "lucide-react";
-import type { PersonId } from "../../lib/media";
 
 export type GanttTone = "teal" | "sky" | "orchid" | "violet" | "rose" | "amber" | "green";
 
@@ -40,7 +39,8 @@ export interface GanttTask {
   end: string;
   /** Share of the work done, from 0 to 1. */
   progress?: number;
-  assignee?: PersonId;
+  /** Owner id. Sample plans use an Arc portrait id; the app passes a member id. */
+  assignee?: string;
   /** Ids of tasks that must end before this one starts. */
   dependsOn?: string[];
   milestone?: boolean;
@@ -53,7 +53,7 @@ export interface GanttTask {
 export interface GanttUpdate {
   id: string;
   /** Who made the change. Leave it out for the signed in person. */
-  person?: PersonId;
+  person?: string;
   text: string;
   /** The task it is about. Selecting the update opens that task. */
   task?: string;
@@ -63,7 +63,7 @@ export interface GanttUpdate {
 
 export const TODAY = "2026-11-12";
 /** The signed in person. */
-export const ME: PersonId = "emma-collins";
+export const ME = "emma-collins";
 
 export const GROUPS: GanttGroup[] = [
   { id: "discovery", name: "Discovery" },

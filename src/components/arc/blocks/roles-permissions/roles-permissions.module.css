@@ -144,5 +144,12 @@
   .menu, .menu[data-state="closed"] { transform: none; transition: opacity var(--duration-instant) linear; }
 }
 
+/* team-tracker: one row per real member, with Arc's select for admin, lead or member. */
+.members { display: grid; gap: 8px; margin: 0; padding: 4px var(--gutter) 16px; list-style: none; }
+.memberRow { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(140px, 180px); gap: 12px; align-items: center; }
+.memberName { display: grid; min-width: 0; }
+.memberName span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.memberEmail { overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+
 /* Full screen (the bare preview frame and app shells): breathing room from the screen edges. */
 :global([data-layout="app"]) .card { padding: clamp(16px, 3vw, 32px); }

@@ -10,6 +10,7 @@ export function LoginClient({ next }: { next: string }) {
       brand="Team tracker"
       providers={[]}
       showSignUp={false}
+      showForgotPassword={false}
       verifyPassword={(email, password) => loginWithPassword(email, password)}
       onSignIn={() => { window.location.assign(next); }}
     />

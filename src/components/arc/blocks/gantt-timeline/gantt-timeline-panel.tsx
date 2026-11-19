@@ -3,15 +3,13 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Minus, Plus, Trash2, X } from "lucide-react";
-import { person } from "../../lib/media";
-import type { PersonId } from "../../lib/media";
 import { AnimatedCounter } from "../../animated-counter/animated-counter";
 import { Button } from "../../button/button";
 import { Progress } from "../../progress/progress";
 import type { GanttGroup, GanttTask, GanttTeam, GanttUpdate } from "./gantt-timeline-data";
 import type { Plan } from "./gantt-timeline-model";
 import { DAY, clamp, doneShare, short, workdays } from "./gantt-timeline-model";
-import { Face, LinkMark, Picker, StatusBadge, StatusIcon, TeamIcon } from "./gantt-timeline-parts";
+import { Face, LinkMark, Picker, StatusBadge, StatusIcon, TeamIcon, useGanttWho } from "./gantt-timeline-parts";
 import styles from "./gantt-timeline.module.css";
 
 const relative = (days: number) => days === 0 ? "today" : days === 1 ? "tomorrow" : days === -1 ? "yesterday" : days > 0 ? `in ${days} days` : `${-days} days ago`;
@@ -27,7 +25,7 @@ export interface DetailsProps extends Shared {
   plan: Plan;
   groups: GanttGroup[];
   teams: GanttTeam[];
-  people: PersonId[];
+  people: string[];
   updates: GanttUpdate[];
   days: number;
   copied: { key: string; ok: boolean } | null;
@@ -41,6 +39,7 @@ export interface DetailsProps extends Shared {
 }
 
 export function Details({ plan, plans, groups, teams, people, updates, origin, days, todayDay, copied, onCopy, onEdit, onDates, onDelete, onBack, onSelect, onStep, position }: DetailsProps) {
+  const who = useGanttWho();
   const { task } = plan;
   const nameRef = useRef<HTMLInputElement>(null);
   const date = (day: number) => short.format(origin + day * DAY);
@@ -79,9 +78,9 @@ export function Details({ plan, plans, groups, teams, people, updates, origin, d
       <dt>Owner</dt>
       <dd>
         <Picker label="Owner" value={task.assignee ?? ""} className={styles.fieldButton}
-          options={people.map(id => ({ id, label: person(id).name, icon: <Face id={id} size={18} />, hint: person(id).role }))}
-          onChange={id => { if (id !== task.assignee) onEdit({ assignee: id as PersonId }, `assigned ${task.name} to ${person(id as PersonId).name}`); }}>
-          {task.assignee ? <><Face id={task.assignee} size={18} /><span className={styles.fieldText}>{person(task.assignee).name}</span></> : <span className={styles.fieldText}>Unassigned</span>}
+          options={people.map(id => ({ id, label: who(id).name, icon: <Face id={id} size={18} />, hint: who(id).role }))}
+          onChange={id => { if (id !== task.assignee) onEdit({ assignee: id }, `assigned ${task.name} to ${who(id).name}`); }}>
+          {task.assignee ? <><Face id={task.assignee} size={18} /><span className={styles.fieldText}>{who(task.assignee).name}</span></> : <span className={styles.fieldText}>Unassigned</span>}
           <ChevronDown size={13} strokeWidth={1.75} className={styles.fieldChevron} aria-hidden="true" />
         </Picker>
       </dd>
@@ -166,7 +165,7 @@ export function Details({ plan, plans, groups, teams, people, updates, origin, d
       {updates.length ? <ul className={styles.activity}>
         {updates.slice(0, 5).map(update => <li key={update.id}>
           {update.person ? <Face id={update.person} size={18} /> : <Face id="emma-collins" size={18} />}
-          <p><span className={styles.activityWho}>{update.person ? person(update.person).name.split(" ")[0] : "You"}</span> {update.text}<span className={styles.activityAt}>{update.at}</span></p>
+          <p><span className={styles.activityWho}>{update.person ? who(update.person).name.split(" ")[0] : "You"}</span> {update.text}<span className={styles.activityAt}>{update.at}</span></p>
         </li>)}
       </ul> : <p className={styles.emptyNote}>No changes yet</p>}
     </Section>

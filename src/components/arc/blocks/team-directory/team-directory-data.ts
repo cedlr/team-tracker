@@ -3,7 +3,7 @@ import { avatar } from "../../lib/media";
 /** Sample directory for Saltmarsh, a 16 person product studio. Replace it with your own people, offices and time off. */
 
 export type Team = "Design" | "Engineering" | "Go-to-market" | "Operations";
-export type Office = "Zürich" | "London" | "New York" | "Remote";
+export type Office = string;
 export type Tone = "teal" | "sky" | "orchid" | "violet" | "rose" | "amber" | "green";
 
 /** Overrides the status worked out from someone's working hours. */

@@ -100,13 +100,29 @@ function Avatar({ entry, size, layoutId, alt = "" }: { entry: Entry; size: numbe
 
 const initialPending = (): Invite[] => [{ key: INVITED.entry.email, entry: INVITED.entry, role: INVITED.role, status: "sent", note: INVITED.note }];
 
+export interface InvitePeopleProps {
+  /** People suggested as you type. Defaults to the sample directory. */
+  directory?: Entry[];
+  /** People already on the team. Defaults to the sample team. */
+  team?: Entry[];
+  /** Role choices on each chip. Defaults to admin, member and guest. */
+  roles?: { value: Role; label: string; description: string }[];
+  /** Seat cap. Defaults to the selected sample plan. */
+  seatLimit?: number;
+  /** team-tracker: creates the accounts. Without it, sending stays a simulation. */
+  onInvite?: (people: { email: string; name?: string; role: Role }[]) => Promise<{ ok: boolean; error?: string; note?: string }>;
+}
+
 /**
  * An invite form for a workspace. People are picked from the directory or typed and pasted as emails, each with its own
  * role. Avatars fly from the suggestion into the field, from the field into the pending list, and from a row into the team
  * once someone joins. A seat meter shows members, pending invites, and the new selection against the plan limit.
- * Sending, joining, resending, and upgrading are simulated.
+ * Sending, joining, resending, and upgrading are simulated unless `onInvite` is set.
  */
-export function InvitePeople() {
+export function InvitePeople({ directory: directoryProp, team: teamProp, roles: rolesProp, seatLimit, onInvite }: InvitePeopleProps = {}) {
+  const directory = directoryProp ?? DIRECTORY;
+  const roleOptions = rolesProp ?? ROLES;
+  const labelOf = (role: Role) => roleOptions.find(entry => entry.value === role)?.label ?? roleLabel(role);
   const uid = useId();
   const reduced = useReducedFlag();
   const rootRef = useRef<HTMLElement>(null);
@@ -118,8 +134,8 @@ export function InvitePeople() {
   const joinedOnce = useRef(false);
   const timers = useRef<number[]>([]);
 
-  const [team, setTeam] = useState<Entry[]>(TEAM);
-  const [pending, setPending] = useState<Invite[]>(initialPending);
+  const [team, setTeam] = useState<Entry[]>(teamProp ?? TEAM);
+  const [pending, setPending] = useState<Invite[]>(() => (onInvite ? [] : initialPending()));
   const [chips, setChips] = useState<Chip[]>([]);
   const [plan, setPlan] = useState<PlanId>("starter");
   const [query, setQuery] = useState("");
@@ -155,7 +171,7 @@ export function InvitePeople() {
   const members = team.length + joinedRows;
   const out = pending.length - joinedRows;
   const selected = okChips.length;
-  const limit = PLANS[plan].seats;
+  const limit = seatLimit ?? PLANS[plan].seats;
   const total = members + out + selected;
   const overBy = Math.max(0, total - limit);
   const blocked = selected === 0 || errorChips.length > 0 || overBy > 0;
@@ -164,14 +180,14 @@ export function InvitePeople() {
     const q = query.trim().toLowerCase();
     const chosen = new Set(chips.map(chip => chip.key));
     const status = (entry: Entry) => teamSet.has(entry.email) ? "On the team" : pendingSet.has(entry.email) ? "Invited" : chosen.has(entry.email) ? "Added" : null;
-    if (!q) return DIRECTORY.filter(entry => !status(entry)).slice(0, 4).map(entry => ({ id: entry.email, kind: "person", entry, note: entry.title ?? "" }));
-    const hits = DIRECTORY.filter(entry => entry.name!.toLowerCase().includes(q) || entry.email.includes(q))
+    if (!q) return directory.filter(entry => !status(entry)).slice(0, 4).map(entry => ({ id: entry.email, kind: "person", entry, note: entry.title ?? "" }));
+    const hits = directory.filter(entry => entry.name!.toLowerCase().includes(q) || entry.email.includes(q))
       .map((entry): Option => { const note = status(entry); return { id: entry.email, kind: note ? "blocked" : "person", entry, note: note ?? entry.title ?? "" }; })
       .sort((a, b) => Number(a.kind === "blocked") - Number(b.kind === "blocked"))
       .slice(0, 5);
-    if (isEmail(q) && !DIRECTORY.some(entry => entry.email === q) && !chosen.has(q)) hits.unshift({ id: `new:${q}`, kind: "email", entry: { email: q }, note: "Invite by email" });
+    if (isEmail(q) && !directory.some(entry => entry.email === q) && !chosen.has(q)) hits.unshift({ id: `new:${q}`, kind: "email", entry: { email: q }, note: "Invite by email" });
     return hits;
-  }, [chips, pendingSet, query, teamSet]);
+  }, [chips, directory, pendingSet, query, teamSet]);
   const firstEnabled = options.findIndex(option => option.kind !== "blocked");
   const activeIndex = options[active] && options[active].kind !== "blocked" ? active : firstEnabled;
   const listOpen = focused && !dismissed && (options.length > 0 || !!query.trim());
@@ -188,7 +204,7 @@ export function InvitePeople() {
     const next = [...chips];
     let added = 0, invalid = 0, duplicates = 0;
     for (const token of splitList(text)) {
-      const parsed = parseToken(token, taken);
+      const parsed = parseToken(token, taken, directory);
       if (!parsed) continue;
       if (parsed.kind === "ok") {
         if (next.some(chip => chip.key === parsed.entry.email)) { duplicates++; continue; }
@@ -309,7 +325,7 @@ export function InvitePeople() {
   const chooseRole = (role: Role) => {
     if (!menuChip) return;
     setChips(current => current.map(chip => chip.key === menuChip.key && chip.kind === "ok" ? { ...chip, role } : chip));
-    setLive(`${menuChip.entry.name ?? menuChip.entry.email} will join as ${roleLabel(role).toLowerCase()}`);
+    setLive(`${menuChip.entry.name ?? menuChip.entry.email} will join as ${labelOf(role).toLowerCase()}`);
     closeMenu(true);
   };
   const onMenuKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -328,12 +344,28 @@ export function InvitePeople() {
     if (!selected) { inputRef.current?.focus(); return; }
     if (errorChips.length) { setShake(count => count + 1); setLive(`Fix or remove ${plural(errorChips.length, "entry", "entries")} before sending`); return; }
     if (overBy) { setNudge(count => count + 1); setLive(`${plural(overBy, "seat")} over the ${PLANS[plan].name} plan. Upgrade or remove people to send.`); return; }
-    const batch: Invite[] = okChips.map(chip => ({ key: chip.key, entry: chip.entry, role: chip.role, status: "sending", note: "Sending" }));
+    const drafted = okChips;
+    const batch: Invite[] = drafted.map(chip => ({ key: chip.key, entry: chip.entry, role: chip.role, status: "sending", note: "Sending" }));
     setMenu(null);
     setChips([]);
     setQuery("");
     setPending(current => [...batch, ...current]);
     setLive(`Sending ${plural(batch.length, "invite")}`);
+    if (onInvite) {
+      void onInvite(batch.map(invite => ({ email: invite.entry.email, name: invite.entry.name, role: invite.role }))).then(result => {
+        if (!result.ok) {
+          setPending(current => current.filter(row => !batch.some(invite => invite.key === row.key)));
+          setChips(drafted);
+          setLive(result.error ?? "Could not add them");
+          showHint(result.error ?? "Could not add them");
+          return;
+        }
+        const note = result.note ?? "Added";
+        setPending(current => current.map(row => batch.some(invite => invite.key === row.key) ? { ...row, status: "sent", note } : row));
+        setLive(note);
+      });
+      return;
+    }
     const step = reduced ? 0 : 160, first = reduced ? 300 : 700;
     batch.forEach((invite, index) => later(first + index * step, () => setPending(current => current.map(row => row.key === invite.key && row.status === "sending" ? { ...row, status: "sent", note: "Sent just now" } : row))));
     const settled = first + batch.length * step;
@@ -417,7 +449,7 @@ export function InvitePeople() {
         <button type="button" className={styles.role} aria-haspopup="menu" aria-expanded={open} aria-label={`Role for ${label}: ${roleLabel(chip.role)}`} data-open={open || undefined}
           onClick={event => openMenu(chip.key, event.currentTarget)}
           onKeyDown={event => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); openMenu(chip.key, event.currentTarget); } }}>
-          <AutoWidth><Swap id={chip.role}>{roleLabel(chip.role)}</Swap></AutoWidth>
+          <AutoWidth><Swap id={chip.role}>{labelOf(chip.role)}</Swap></AutoWidth>
           <ChevronDown size={12} strokeWidth={1.75} aria-hidden="true" />
         </button>
         <button type="button" className={styles.chipRemove} aria-label={`Remove ${label}`} onClick={() => removeChip(chip.key, label)}><X size={14} strokeWidth={1.75} aria-hidden="true" /></button>
@@ -551,7 +583,7 @@ export function InvitePeople() {
 
         <footer className={styles.footer}>
           <div className={styles.footerActions}>
-            <button type="button" className={styles.iconButton} onClick={reset} aria-label="Reset preview" title="Reset preview"><RotateCcw {...icon} /></button>
+            {!onInvite && <button type="button" className={styles.iconButton} onClick={reset} aria-label="Reset preview" title="Reset preview"><RotateCcw {...icon} /></button>}
             <button type="button" className={styles.send} onClick={send} aria-disabled={blocked || undefined}
               aria-describedby={errorChips.length ? errorsId : overBy ? seatsId : undefined} aria-label={selected ? `Send ${plural(selected, "invite")}` : "Send invites"}>
               <Send {...icon} />
@@ -581,7 +613,7 @@ export function InvitePeople() {
                     <Avatar entry={invite.entry} size={36} layoutId={avatarId(invite.entry.email)} />
                     <motion.div className={styles.rowText} initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: duration.standard, delay: .12 }}>
                       <span className={styles.rowName}>{label}</span>
-                      <span className={styles.rowMeta}>{roleLabel(invite.role)}{invite.entry.name ? ` · ${invite.entry.email}` : ""}</span>
+                      <span className={styles.rowMeta}>{labelOf(invite.role)}{invite.entry.name ? ` · ${invite.entry.email}` : ""}</span>
                     </motion.div>
                     <motion.span className={styles.status} data-status={invite.status} initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: duration.standard, delay: .12 }}>
                       <AutoWidth>
@@ -621,7 +653,7 @@ export function InvitePeople() {
             style={{ left: menu.x, top: menu.y }} onKeyDown={onMenuKey}
             initial={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, y: -4, scale: .97, transition: { duration: duration.fast } }} transition={reduced ? { duration: duration.instant } : spring.snappy}>
-            {ROLES.map(role => <button key={role.value} type="button" role="menuitemradio" aria-checked={menuChip.role === role.value} className={styles.menuItem}
+            {roleOptions.map(role => <button key={role.value} type="button" role="menuitemradio" aria-checked={menuChip.role === role.value} className={styles.menuItem}
               onPointerMove={event => { if (document.activeElement !== event.currentTarget) event.currentTarget.focus({ preventScroll: true }); }}
               onClick={() => chooseRole(role.value)}>
               <span className={styles.menuLabel}>{role.label}</span>

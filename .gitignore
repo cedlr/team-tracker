@@ -44,5 +44,10 @@ next-env.d.ts
 # local data store (dev fallback when no Upstash env vars)
 /.data
 
+# playwright
+/test-results
+/playwright-report
+/blob-report
+
 # packaged copy
 *.tar.gz

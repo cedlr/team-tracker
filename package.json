@@ -9,7 +9,8 @@
     "lint": "eslint",
     "seed": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/seed.ts",
     "typecheck": "tsc --noEmit",
-    "redis:check": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/redis-check.ts"
+    "redis:check": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/redis-check.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.4.1",
@@ -33,6 +34,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -13,9 +13,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../popover/popover";
 import { SearchField } from "../../search-field/search-field";
 import SegmentedControl from "../../segmented-control/segmented-control";
 import { motionTokens } from "../../lib/motion-tokens";
-import { directoryPeople, directoryTimeOff, offices, teams, viewerId as defaultViewerId } from "./team-directory-data";
+import { directoryNow, directoryPeople, directoryTimeOff, offices as sampleOffices, teams, viewerId as defaultViewerId } from "./team-directory-data";
 import type { DirectoryPerson, Office, Team, TimeOffRequest } from "./team-directory-data";
-import { DayPhase, Picker, PickerChevron, StatusLabel, TeamIcon, clock, cx, instant, localMinutes, statusOf } from "./team-directory-parts";
+import { DayPhase, DirectoryClockProvider, Picker, PickerChevron, StatusLabel, TeamIcon, clock, cx, instant, localMinutes, statusOf } from "./team-directory-parts";
+import type { DirectoryOffice } from "./team-directory-parts";
 import type { PersonStatus, StatusKind } from "./team-directory-parts";
 import { OrgChart, PeopleGrid, PeopleList, ProfilePanel, TimeOffPage } from "./team-directory-pages";
 import type { PeopleGroup, SortKey, SortState } from "./team-directory-pages";
@@ -52,6 +53,12 @@ export interface TeamDirectoryProps {
   onManagerChange?: (personId: string, managerId: string) => void;
   /** Called when a time off request is approved or declined. */
   onTimeOffDecision?: (requestId: string, decision: "approve" | "decline") => void;
+  /** team-tracker: epoch ms for clocks and the time-off strip. Defaults to the sample studio's fixed moment. */
+  now?: number;
+  /** team-tracker: time zone used to place "today" on the time-off strip. */
+  timeZone?: string;
+  /** team-tracker: offices to show clocks for. Defaults to the sample offices. */
+  offices?: DirectoryOffice[];
   className?: string;
 }
 
@@ -88,7 +95,8 @@ function ShellBridge({ apiRef }: { apiRef: MutableRefObject<ShellApi | null> }) 
  */
 export function TeamDirectory({
   onPersonSelect, people: peopleProp = directoryPeople, timeOff: timeOffProp = directoryTimeOff, viewerId = defaultViewerId, workspaceName = "Saltmarsh",
-  defaultView = "grid", defaultPage = "people", defaultSelectedId = "marcus-johnson", defaultProfileOpen = false, onInvite, onManagerChange, onTimeOffDecision, className,
+  defaultView = "grid", defaultPage = "people", defaultSelectedId = "marcus-johnson", defaultProfileOpen = false, onInvite, onManagerChange, onTimeOffDecision,
+  now = directoryNow, timeZone = "UTC", offices = sampleOffices, className,
 }: TeamDirectoryProps) {
   const uid = useId();
   const reduce = useReducedMotion() ?? false;
@@ -118,7 +126,7 @@ export function TeamDirectory({
   useEffect(() => { pageRef.current?.parentElement?.closest<HTMLElement>("[data-padding]")?.scrollTo({ top: 0 }); }, [page]);
   const viewer = people.find(person => person.id === viewerId) ?? people[0];
   const selected = people.find(person => person.id === selectedId) ?? people[0];
-  const statusFor = useCallback((person: DirectoryPerson) => statusOf(person, viewerAway, viewer.id), [viewerAway, viewer.id]);
+  const statusFor = useCallback((person: DirectoryPerson) => statusOf(person, viewerAway, viewer.id, now), [viewerAway, viewer.id, now]);
 
   /* Notices sit in the header and leave on their own. */
   const noticeId = useRef(0);
@@ -226,7 +234,7 @@ export function TeamDirectory({
     { id: "timeoff", label: "Time off", icon: CalendarDays, count: pendingCount || undefined },
   ];
   const sections: ScreenShellSection[] = [
-    { id: "offices", label: "Offices", icon: Clock3, items: [], content: <OfficeClocks people={people} statusFor={statusFor} active={page === "people" ? office : "all"} onPick={pickOffice} /> },
+    { id: "offices", label: "Offices", icon: Clock3, items: [], content: <OfficeClocks people={people} offices={offices} now={now} statusFor={statusFor} active={page === "people" ? office : "all"} onPick={pickOffice} /> },
   ];
   const favoritePeople = people.filter(person => favorites.has(person.id));
   if (favoritePeople.length) sections.push({ id: "favorites", label: "Favorites", items: favoritePeople.map(person => ({ id: `fav:${person.id}`, label: person.name, avatar: person.photo })) });
@@ -291,7 +299,7 @@ export function TeamDirectory({
         <span>{statusFilter === "any" ? "Status" : statusOptions.find(option => option.value === statusFilter)?.label}</span><PickerChevron />
       </Picker>
       {office !== "all" && <Button variant="secondary" size="sm" className={cx(styles.btn, styles.officeChip)} aria-label={`Office: ${office}. Remove filter`} onClick={() => setOffice("all")}>
-        <DayPhase minutes={localMinutes(offices.find(entry => entry.id === office) ?? offices[0])} />{office}<X size={16} strokeWidth={1.75} aria-hidden="true" />
+        <DayPhase minutes={localMinutes(offices.find(entry => entry.id === office) ?? offices[0], now)} />{office}<X size={16} strokeWidth={1.75} aria-hidden="true" />
       </Button>}
       {filtersOn && <Button variant="ghost" size="sm" className={styles.btn} onClick={clearFilters}>Clear</Button>}
       <SegmentedControl className={styles.segmented} label="Layout" value={view} onValueChange={value => setView(value as TeamDirectoryView)}
@@ -299,7 +307,7 @@ export function TeamDirectory({
     </div> : undefined,
   };
 
-  return <div className={cx(styles.root, className)} data-td-root={uid}>
+  return <DirectoryClockProvider value={{ now, timeZone, offices }}><div className={cx(styles.root, className)} data-td-root={uid}>
     <ScreenShell
       className={styles.shell}
       aria-label={workspaceName}
@@ -368,7 +376,7 @@ export function TeamDirectory({
       {page === "timeoff" && <TimeOffPage requests={requests} people={people} onDecide={decide} onSelect={select} onOpen={openPanel} />}
       </div>
     </ScreenShell>
-  </div>;
+  </div></DirectoryClockProvider>;
 }
 
 /* ------------------------------------------------------------------ Sidebar: office clocks */
@@ -377,14 +385,14 @@ export function TeamDirectory({
  * Every office with its local time, the sun or moon over it and how many people there are working right now. A row filters the
  * People page to that office; pressing it again clears the filter. The chosen row takes a calm full fill in place.
  */
-function OfficeClocks({ people, statusFor, active, onPick }: {
-  people: DirectoryPerson[]; statusFor: (person: DirectoryPerson) => PersonStatus; active: Office | "all"; onPick: (office: Office) => void;
+function OfficeClocks({ people, offices, now, statusFor, active, onPick }: {
+  people: DirectoryPerson[]; offices: DirectoryOffice[]; now: number; statusFor: (person: DirectoryPerson) => PersonStatus; active: Office | "all"; onPick: (office: Office) => void;
 }) {
   return <ul className={styles.clocks}>
     {offices.map(office => {
       const here = people.filter(person => person.office === office.id);
       const working = here.filter(person => isWorking(statusFor(person))).length;
-      const minutes = localMinutes(office);
+      const minutes = localMinutes(office, now);
       return <li key={office.id}>
         <button type="button" className={styles.clock} aria-pressed={active === office.id} onClick={() => onPick(office.id)}
           aria-label={`${office.label}, ${clock(minutes)} local time, ${working} of ${here.length} working now`}>

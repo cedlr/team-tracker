@@ -59,24 +59,44 @@ Utilization = hours logged on the team's tasks รท (capacity share for the team โ
 | --- | --- |
 | `/login` | `login-split` (email + password, wired to Auth.js) |
 | shared frame | `screen-shell` with one nav config (`src/components/app/nav.ts`), team switcher, account menu, daily check-in button |
-| `/` | `metric-card`, `bar-chart`, `activity-heatmap` |
-| `/tasks`, `/projects/[id]` | `kanban-board` (moves and edits saved) |
+| `/` | `metric-card`, `bar-chart`, `activity-heatmap`, `activity-feed` (recent task, leave and check-in events) |
+| `/tasks` | `kanban-board` (create, edit and move saved) |
 | `/projects` | `sortable-data-table`, `progress`, `badge` |
-| `/timeline` | `gantt-timeline` (drag to reschedule saves dates) |
-| `/calendar` | `month-calendar` (leave + due dates; new event on Approved leave = leave request) |
-| `/people` | `team-directory` |
+| `/projects/[id]` | `kanban-board` scoped to the project, then `task-breakdown` of that project's tasks |
+| `/timeline` | `gantt-timeline` (real members; drag to reschedule saves dates) |
+| `/calendar` | `month-calendar` (leave, task deadlines, holidays; create and delete persist) |
+| `/people` | `team-directory` (real members, Kuala Lumpur clocks, today's date) |
 | `/leave` | `team-directory` time off page (approve/decline) + `dialog`, `date-range-picker`, `select`, `textarea` request form |
-| `/utilization` | `bar-chart`, `sortable-data-table`, `usage-meter`, `segmented-control` |
-| `/settings` | `profile-page`, `roles-permissions`, `invite-people` |
+| `/utilization` | `bar-chart`, `sortable-data-table`, `usage-meter`, `segmented-control`, plus an hours log on a task |
+| `/settings` | `profile-page` (edit saves), password change, rename/add team, `roles-permissions` (roles save), `invite-people` (new member + temporary password) |
 
 Alignment edits to Arc source are marked `team-tracker:` (login-split props, screen-shell app provider).
 
 ## Server Actions (`src/app/actions`)
 
-`checkIn`, `upsertTask`, `moveTasks`, `requestLeave`, `decideLeave`, `selectTeam`, `loginWithPassword`, `logout`.
+`checkIn`, `checkOut`, `upsertTask`, `moveTasks`, `logHours`, `requestLeave`, `decideLeave`, `cancelLeave`, `createCalendarItem`, `deleteCalendarItem`, `updateProfile`, `changePassword`, `inviteMember`, `setMemberRole`, `renameTeam`, `createTeam`, `saveRoleGrants`, `selectTeam`, `loginWithPassword`, `logout`.
 
-## Known limits
+Leads and admins approve leave, invite people, change roles and manage teams. Members can update their own profile and password, log time, check in and out, and request leave.
 
-- Arc screens that only run on their own sample data: `metrics-dashboard`, `kpi-drilldown`, `project-board`, `settings-page`, `roles-permissions`, `invite-people`, `activity-feed`, `task-breakdown`, `week-calendar`. They are installed; the routes above use the ones that take real data.
-- `gantt-timeline` draws owners from Arc's sample portrait set, so owners show only for members whose `avatar` is an Arc portrait id.
-- `team-directory` keeps its sample office clocks and a fixed "now" for its time off strip.
+Dates and "today" use `Asia/Kuala_Lumpur` (`src/lib/time.ts`).
+
+## Verify
+
+```bash
+npm run build
+npm run lint
+npm run e2e    # seeds ./.data, starts the production server, Playwright smoke test
+```
+
+Playwright needs Chromium: `npx playwright install chromium`.
+
+## Still on sample data
+
+These Arc screens are installed and unchanged as demos. They do not fit a team tracker, so no route renders them:
+
+- `metrics-dashboard` and `kpi-drilldown` are website analytics, not team utilization.
+- `project-board` is a sample project home. Project detail uses the kanban board plus `task-breakdown` instead.
+- `settings-page` is a sample account form. Settings uses `profile-page`, `roles-permissions` and `invite-people`.
+- `week-calendar` is a sample week planner. The calendar route uses `month-calendar`, which is where events are created and deleted.
+
+`activity-feed` and `task-breakdown` take real team data (the dashboard feed, and the breakdown under a project). `roles-permissions` and `invite-people` save. The permission matrix is stored on the team; what the server enforces is the admin / lead / member role.

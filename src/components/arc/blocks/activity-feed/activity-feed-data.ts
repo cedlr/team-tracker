@@ -10,10 +10,13 @@ export type ActivityDetail =
   | { kind: "files"; photos: PhotoId[] }
   | { kind: "deploy"; environment: string; commit: string; duration: string; status: "ready" | "failed"; log?: string[] };
 
+export type ActivityActor = PersonId | { name: string; src?: string };
+
 export type Activity = {
   id: string;
   type: ActivityType;
-  actor: PersonId;
+  /** A sample portrait id, or a real person with a name and an optional photo. */
+  actor: ActivityActor;
   /** Verb phrase between the actor and the target, such as "commented on". */
   action: string;
   target: string;

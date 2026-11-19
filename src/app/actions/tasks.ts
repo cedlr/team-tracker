@@ -15,14 +15,17 @@ export async function upsertTask(input: unknown) {
   if (!project || project.teamId !== team.id) return { ok: false as const, error: "Project not found in this team." };
   const previous = parsed.data.id ? await getTask(parsed.data.id) : null;
   if (previous && previous.teamId !== team.id) return { ok: false as const, error: "Task not found in this team." };
-  const { id: _id, ...fields } = parsed.data;
+  const { due, ...fields } = parsed.data;
+  delete fields.id;
   const task: Task = {
     ...(previous ?? { id: parsed.data.id ?? randomUUID(), teamId: team.id, status: "todo", priority: "none", order: Date.now() }),
     ...Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)),
     updatedAt: new Date().toISOString(),
   } as Task;
+  if (due === null) delete task.due;
+  else if (due) task.due = due;
   const saved = await saveTask(task);
-  revalidatePath("/tasks"); revalidatePath(`/projects/${saved.projectId}`); revalidatePath("/");
+  revalidatePath("/", "layout");
   return { ok: true as const, task: saved };
 }
 
@@ -39,6 +42,6 @@ export async function moveTasks(moves: { id: string; status: string; order: numb
     await saveTask({ ...task, status: status.data, order: move.order, updatedAt: new Date().toISOString() });
     written++;
   }
-  if (written) { revalidatePath("/tasks"); revalidatePath("/"); }
+  if (written) revalidatePath("/", "layout");
   return { ok: true as const, written };
 }

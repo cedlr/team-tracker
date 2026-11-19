@@ -7,7 +7,8 @@ import { ScreenShellAppProvider, type ScreenShellTone } from "@/components/arc/s
 import { Button } from "@/components/arc/button/button";
 import { appNav, navIcons, navIdFor } from "./nav";
 import { selectTeam } from "@/app/actions/team";
-import { checkIn } from "@/app/actions/attendance";
+import { checkIn, checkOut } from "@/app/actions/attendance";
+import { APP_TIME_ZONE } from "@/lib/time";
 import { logout } from "@/app/actions/auth";
 
 export interface AppShellData {
@@ -15,6 +16,7 @@ export interface AppShellData {
   teamId: string;
   account: { name: string; email: string; avatar?: string; title: string };
   checkedInAt: string | null;
+  checkedOutAt: string | null;
   canManage: boolean;
 }
 
@@ -24,25 +26,31 @@ export function AppShell({ data, children }: { data: AppShellData; children: Rea
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [checkedInAt, setCheckedInAt] = useState(data.checkedInAt);
-
-  const time = checkedInAt ? new Date(checkedInAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
+  const [checkedOutAt, setCheckedOutAt] = useState(data.checkedOutAt);
+  const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", timeZone: APP_TIME_ZONE });
+  const label = checkedOutAt ? `Checked out at ${clock(checkedOutAt)}` : checkedInAt ? `Check out · in at ${clock(checkedInAt)}` : "Check in for today";
   const checkInButton = (
     <Button
       variant={checkedInAt ? "secondary" : "primary"}
       size="sm"
       loading={pending}
-      aria-disabled={Boolean(checkedInAt) || undefined}
+      aria-disabled={Boolean(checkedOutAt) || undefined}
       style={{ width: "100%" }}
       onClick={() => {
-        if (checkedInAt || pending) return;
+        if (checkedOutAt || pending) return;
         startTransition(async () => {
-          const result = await checkIn({ status: "present" });
-          if (result.ok) { setCheckedInAt(result.at); router.refresh(); }
+          if (!checkedInAt) {
+            const result = await checkIn({ status: "present" });
+            if (result.ok) { setCheckedInAt(result.at); router.refresh(); }
+            return;
+          }
+          const result = await checkOut();
+          if (result.ok) { setCheckedOutAt(result.at); router.refresh(); }
         });
       }}
     >
       <navIcons.checkIn size={16} strokeWidth={1.75} aria-hidden="true" />
-      {time ? `Checked in at ${time}` : "Check in for today"}
+      {label}
     </Button>
   );
 

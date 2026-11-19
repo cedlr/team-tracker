@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import type { Transition } from "motion/react";
 import { Briefcase, CalendarClock, Check, ChevronDown, CircleCheck, Code, Hourglass, Megaphone, Moon, PenTool, Plane, Sun, Sunrise, Sunset } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar } from "../../avatar/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "../../popover/popover";
-import { directoryNow, teams } from "./team-directory-data";
+import { directoryNow, offices as sampleOffices, teams } from "./team-directory-data";
 import type { DirectoryPerson, Team, Tone } from "./team-directory-data";
 import styles from "./team-directory.module.css";
 
@@ -17,10 +17,26 @@ export const instant: Transition = { duration: 0 };
 /* ------------------------------------------------------------------ Time and status */
 
 const DAY = 1440;
-const nowMinutesUtc = Math.floor(directoryNow / 60000) % DAY;
 
-/** Minutes past midnight in the person's local time, right now. */
-export function localMinutes(person: Pick<DirectoryPerson, "utcOffset">) {
+export interface DirectoryOffice { id: string; utcOffset: number; label: string }
+interface DirectoryClock { now: number; timeZone: string; offices: DirectoryOffice[] }
+const ClockContext = createContext<DirectoryClock>({ now: directoryNow, timeZone: "UTC", offices: sampleOffices });
+/** team-tracker: the real clock and the offices that actually have people. Defaults keep the sample studio fixed. */
+export function DirectoryClockProvider({ value, children }: { value: DirectoryClock; children: ReactNode }) {
+  return <ClockContext.Provider value={value}>{children}</ClockContext.Provider>;
+}
+export function useDirectoryClock() { return useContext(ClockContext); }
+
+/** UTC day index of a timestamp's calendar date in a time zone. */
+export function calendarDay(now: number, timeZone: string) {
+  const iso = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(now));
+  const [year, month, date] = iso.split("-").map(Number);
+  return Math.round(Date.UTC(year, month - 1, date) / 86400000);
+}
+
+/** Minutes past midnight in the person's local time. */
+export function localMinutes(person: Pick<DirectoryPerson, "utcOffset">, now: number) {
+  const nowMinutesUtc = Math.floor(now / 60000) % DAY;
   return (((nowMinutesUtc + person.utcOffset * 60) % DAY) + DAY) % DAY;
 }
 
@@ -29,12 +45,12 @@ export const clock = (minutes: number) => `${String(Math.floor(minutes / 60) % 2
 export type StatusKind = "available" | "meeting" | "out" | "offline" | "joining";
 export interface PersonStatus { kind: StatusKind; label: string; /** A shorter label for cards and rows. */ short?: string }
 
-export function statusOf(person: DirectoryPerson, viewerAway = false, viewerId?: string): PersonStatus {
+export function statusOf(person: DirectoryPerson, viewerAway = false, viewerId?: string, now = directoryNow): PersonStatus {
   if (viewerAway && person.id === viewerId) return { kind: "offline", label: "Away" };
   const override = person.status;
   if (override?.kind === "joining") return { kind: "joining", label: `Starts ${override.on}` };
   if (override?.kind === "out") return { kind: "out", label: `Out until ${override.until}` };
-  const local = localMinutes(person);
+  const local = localMinutes(person, now);
   const [start, end] = person.hours;
   if (local < start * 60 || local >= end * 60) return { kind: "offline", label: local < start * 60 ? `Online at ${clock(start * 60)}` : "Offline" };
   if (override?.kind === "meeting") return { kind: "meeting", label: `In a meeting until ${override.until}`, short: `Busy until ${override.until}` };
@@ -58,9 +74,9 @@ export function dateRange(from: string, to: string) {
   const a = parseDate(from), b = parseDate(to);
   return a.m === b.m && a.y === b.y ? `${months[a.m]} ${a.d} to ${b.d}` : `${shortDate(from)} to ${shortDate(to)}`;
 }
-export function tenure(iso: string) {
+export function tenure(iso: string, nowMs = directoryNow) {
   const { y, m, d } = parseDate(iso);
-  const now = new Date(directoryNow);
+  const now = new Date(nowMs);
   let total = (now.getUTCFullYear() - y) * 12 + now.getUTCMonth() - m - (now.getUTCDate() < d ? 1 : 0);
   if (total < 0) return "Not started yet";
   if (total < 1) return "New this month";

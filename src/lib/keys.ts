@@ -18,4 +18,6 @@ export const keys = {
   attendance: (memberId: string, month: string) => `att:${memberId}:${month}`,
   /** Hash: taskId -> TimeEntry. */
   time: (memberId: string, date: string) => `time:${memberId}:${date}`,
+  event: (id: string) => `event:${id}`,
+  teamEvents: (teamId: string) => `events:team:${teamId}`,
 };

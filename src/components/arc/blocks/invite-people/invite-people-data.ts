@@ -1,13 +1,13 @@
 import { people, type PersonId } from "../../lib/media";
 
-export type Role = "admin" | "member" | "guest";
+export type Role = "admin" | "lead" | "member" | "guest";
 
 export const ROLES: { value: Role; label: string; description: string }[] = [
   { value: "admin", label: "Admin", description: "Manages members and billing" },
   { value: "member", label: "Member", description: "Creates and edits projects" },
   { value: "guest", label: "Guest", description: "Views shared projects only" },
 ];
-export const roleLabel = (role: Role) => ROLES.find(entry => entry.value === role)!.label;
+export const roleLabel = (role: Role) => ROLES.find(entry => entry.value === role)?.label ?? role.charAt(0).toUpperCase() + role.slice(1);
 
 /** Someone who can be invited: a directory person with a photo, or a bare email address. */
 export interface Entry {
@@ -60,13 +60,13 @@ export function splitList(text: string) {
 export type Parsed = { kind: "ok"; entry: Entry } | { kind: "error"; text: string; message: string };
 
 /** Resolves one token to a person, or explains in plain words why it cannot be invited. */
-export function parseToken(raw: string, taken: { team: Set<string>; pending: Set<string> }): Parsed | null {
+export function parseToken(raw: string, taken: { team: Set<string>; pending: Set<string> }, directory: Entry[] = DIRECTORY): Parsed | null {
   const bracketed = raw.match(/<\s*([^<>\s]+)\s*>/);
   const text = (bracketed ? bracketed[1] : raw).trim().replace(/^["']+|["']+$/g, "").trim();
   if (!text) return null;
   const lower = text.toLowerCase().replace(/\s+/g, " ");
-  const entry = DIRECTORY.find(person => person.name?.toLowerCase() === lower)
-    ?? (isEmail(text) ? DIRECTORY.find(person => person.email === lower) ?? { email: lower } : undefined);
+  const entry = directory.find(person => person.name?.toLowerCase() === lower)
+    ?? (isEmail(text) ? directory.find(person => person.email === lower) ?? { email: lower } : undefined);
   if (entry) {
     const label = entry.name ?? entry.email;
     if (taken.team.has(entry.email)) return { kind: "error", text, message: `${label} is already on the team` };

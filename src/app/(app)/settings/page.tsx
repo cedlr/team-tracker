@@ -5,21 +5,28 @@ import { requireViewer } from "@/lib/session";
 import { getAttendanceMonth, listLeaves, listMembers, listProjects, listTasks } from "@/lib/db";
 import { avatarSrc } from "@/lib/avatar";
 import { photos } from "@/components/arc/lib/media";
+import { zonedISODate } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const { team, member, isLead } = await requireViewer();
-  const month = format(new Date(), "yyyy-MM");
+  const month = zonedISODate().slice(0, 7);
   const [tasks, projects, members, leaves, attendance] = await Promise.all([
     listTasks({ teamId: team.id }), listProjects(team.id), listMembers(team.id), listLeaves(team.id), getAttendanceMonth(member.id, month),
   ]);
   const people = new Map(members.map(m => [m.id, m]));
   return <SettingsView
     teamName={team.name}
+    teamId={team.id}
     isLead={isLead}
+    members={members.map(person => ({
+      id: person.id, name: person.name, email: person.email, avatar: avatarSrc(person.avatar),
+      role: person.memberships.find(entry => entry.teamId === team.id)?.role ?? "member",
+    }))}
+    grants={team.grants}
     profile={{
-      name: member.name, handle: member.email.split("@")[0], headline: member.title, location: "Kuala Lumpur", website: "", bio: "",
+      name: member.name, handle: member.email.split("@")[0], headline: member.title, location: member.location || "Kuala Lumpur", website: member.website || "", bio: member.bio || "",
       avatar: avatarSrc(member.avatar), cover: photos.find(p => p.id === "mountain-ridges")?.src, joined: format(new Date(`${member.started}T00:00:00`), "MMMM yyyy"),
     }}
     stats={[

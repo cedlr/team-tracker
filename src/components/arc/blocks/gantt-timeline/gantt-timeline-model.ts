@@ -1,5 +1,3 @@
-import type { PersonId } from "../../lib/media";
-import { person } from "../../lib/media";
 import type { GanttGroup, GanttTask, GanttTeam, GanttTone } from "./gantt-timeline-data";
 
 export type GanttZoom = "day" | "week" | "month";
@@ -32,7 +30,7 @@ export interface Lane {
   name: string;
   tone?: GanttTone;
   team?: GanttTeam;
-  person?: PersonId;
+  person?: string;
   members: Plan[];
 }
 
@@ -69,7 +67,7 @@ export function buildPlans(tasks: GanttTask[], origin: number, todayDay: number,
   });
 }
 
-export function buildLanes(grouping: GanttGrouping, plans: Plan[], groups: GanttGroup[], teams: GanttTeam[]): Lane[] {
+export function buildLanes(grouping: GanttGrouping, plans: Plan[], groups: GanttGroup[], teams: GanttTeam[], nameOf: (id: string) => string = id => id): Lane[] {
   if (grouping === "phase") return groups.map(group => ({ id: group.id, name: group.name, members: plans.filter(plan => plan.task.group === group.id) }));
   if (grouping === "team") {
     const lanes: Lane[] = teams.map(team => ({ id: `team:${team.id}`, name: team.name, tone: team.tone, team, members: plans.filter(plan => plan.task.team === team.id) }));
@@ -77,9 +75,9 @@ export function buildLanes(grouping: GanttGrouping, plans: Plan[], groups: Gantt
     if (loose.length) lanes.push({ id: "team:none", name: "No team", members: loose });
     return lanes.filter(lane => lane.members.length);
   }
-  const owners: PersonId[] = [];
+  const owners: string[] = [];
   plans.forEach(plan => { if (plan.task.assignee && !owners.includes(plan.task.assignee)) owners.push(plan.task.assignee); });
-  const lanes: Lane[] = owners.map(id => ({ id: `owner:${id}`, name: person(id).name, person: id, members: plans.filter(plan => plan.task.assignee === id) }));
+  const lanes: Lane[] = owners.map(id => ({ id: `owner:${id}`, name: nameOf(id), person: id, members: plans.filter(plan => plan.task.assignee === id) }));
   const loose = plans.filter(plan => !plan.task.assignee);
   if (loose.length) lanes.push({ id: "owner:none", name: "Unassigned", members: loose });
   return lanes;
