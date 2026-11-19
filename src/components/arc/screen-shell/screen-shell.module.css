@@ -1,0 +1,348 @@
+.root {
+  --ss-canvas: color-mix(in oklab, var(--surface-muted) 72%, var(--background));
+  --ss-main: var(--background);
+  --ss-raised: var(--surface);
+  --ss-field: var(--background);
+  --ss-hover: color-mix(in oklab, var(--foreground) 4.5%, transparent);
+  --ss-active: color-mix(in oklab, var(--foreground) 7%, transparent);
+  --ss-row: 32px;
+  --ss-line: var(--border);
+  position: relative;
+  container: screen-shell / inline-size;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--ss-canvas);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: 13px; /* page content inherits this; the shell's own chrome uses the --text-sm and --text-xs scale */
+  letter-spacing: var(--tracking-body);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+/* Dark: the canvas is the deepest layer and the page rises above it. */
+:global(:root[data-theme="dark"]) .root {
+  --ss-canvas: var(--background);
+  --ss-main: var(--surface);
+  --ss-raised: var(--surface-raised);
+  --ss-field: color-mix(in oklab, var(--surface) 70%, var(--background));
+  --ss-hover: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --ss-active: color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+.root[data-resizing] { cursor: col-resize; user-select: none; }
+.root button { font: inherit; letter-spacing: inherit; -webkit-tap-highlight-color: transparent; }
+
+
+.frame { display: flex; height: 100%; min-height: 0; }
+
+/* ------------------------------------------------------------------ Sidebar
+ * Rows, headings, the search field, counts and the account follow the workspace-sidebar block: 32px rows at an 8px radius,
+ * --text-sm labels, --text-xs medium headings and tabular --text-xs counts. Hover fills are instant and live in the
+ * (hover: hover) block at the end, so touch never keeps a stuck fill; presses answer with the active fill everywhere. */
+
+.sidebar { position: relative; z-index: 3; display: flex; flex: none; flex-direction: column; width: 248px; height: 100%; min-width: 0; overflow: hidden; padding: 8px; background: var(--ss-canvas); font-size: var(--text-sm); }
+.root[data-variant="flat"] .sidebar { border-right: 1px solid var(--ss-line); }
+
+.top { position: relative; display: flex; flex: none; height: 40px; align-items: center; margin-bottom: 4px; }
+.workspace { --focus-outline-offset: -2px; display: flex; width: 100%; min-width: 0; height: 36px; align-items: center; gap: 10px; border: 0; border-radius: 10px; padding: 0 40px 0 9px; background: transparent; color: var(--foreground); text-align: left; cursor: pointer; }
+.workspace[data-open], .workspace:active { background: var(--ss-active); }
+.workspaceMark { display: grid; flex: none; place-items: center; }
+.workspaceMark > * { grid-area: 1 / 1; }
+.workspaceLogo { display: grid; place-items: center; }
+.railExpand { color: var(--text-secondary); opacity: 0; }
+.workspaceName { overflow: hidden; font-weight: 500; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.workspaceChevron { flex: none; color: var(--text-muted); }
+.workspace[data-open] .workspaceChevron { color: var(--foreground); }
+.topToggle { position: absolute; top: 4px; right: 2px; }
+
+/* Workspace logo: a solid brand tile with a near-white mark, like a real app icon. The fills are fixed brand colours (the tones'
+ * light values, deepened) so the logo reads the same in both themes and the mark keeps strong contrast; a hairline edge and a
+ * soft top highlight give the tile its finish. The radius is 27% of the size, so it scales with the tile. */
+/* Workspace logo: a plain mark in the foreground colour, black in light and white in dark, with no tile. */
+.mark { display: grid; flex: none; place-items: center; color: var(--foreground); }
+:global(:root[data-theme="dark"]) .mark > svg { display: block; width: 100%; height: 100%; }
+
+/* The search field is Arc's search-field quieted for a sidebar, as in the workspace-sidebar block: 32px, 8px radius, a muted
+ * glass that wakes up with the field, the border darkening on hover and focus while the box never changes size. */
+.searchRow { flex: none; padding-bottom: 8px; }
+.search { --focus-outline-offset: -2px; display: flex; width: 100%; height: var(--ss-row); align-items: center; gap: 8px; overflow: hidden; border: 1px solid var(--ss-line); border-radius: 8px; padding: 0 5px 0 9px; background: var(--ss-field); color: var(--text-muted); text-align: left; cursor: text; }
+button.search { cursor: pointer; }
+.search:focus-within { border-color: var(--text-muted); }
+.searchIcon { flex: none; color: var(--text-muted); }
+.search:focus-within .searchIcon, .search[data-filled] .searchIcon { color: var(--foreground); }
+.searchPlaceholder { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.searchInput { flex: 1; min-width: 0; height: 100%; border: 0; padding: 0; background: transparent; color: var(--foreground); font: inherit; letter-spacing: inherit; outline: none; }
+.searchInput::placeholder { color: var(--text-muted); }
+.searchInput::-webkit-search-cancel-button { display: none; }
+.searchClear { --focus-outline-offset: -2px; display: grid; width: 22px; height: 22px; flex: none; place-items: center; border: 0; border-radius: 6px; padding: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.searchClear:active { background: var(--ss-active); color: var(--foreground); }
+/* Arc's Kbd cap, the small size, sitting on the field's right edge. */
+.kbd { flex: none; margin-left: auto; }
+
+/* Free slots for app specific content: sidebarTop under the search and sidebarFooter above the account. In the rail they fold
+ * away on the smooth spring and keep the full sidebar width inside, so nothing reflows while the width morphs. */
+.fold { flex: none; overflow: hidden; }
+.foldInner { display: grid; width: 232px; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.foldTop { padding-bottom: 8px; }
+.foldFooter { padding-bottom: 8px; }
+
+/* The middle scrolls with no scrollbar; a soft fade marks whichever edge cuts content off. */
+.sidebarScroll { --ft: 0px; --fb: 0px; flex: 1; min-height: 0; margin: 0 -8px; overflow-x: hidden; overflow-y: auto; padding: 0 8px; scrollbar-width: none; overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%); }
+.sidebarScroll::-webkit-scrollbar, .scroll::-webkit-scrollbar, .panelInner::-webkit-scrollbar { display: none; }
+.sidebarScroll[data-fade-top], .scroll[data-fade-top] { --ft: 20px; }
+.sidebarScroll[data-fade-bottom], .scroll[data-fade-bottom] { --fb: 20px; }
+.sidebarScrollInner { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); padding-bottom: 8px; }
+
+.nav, .results { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 1px; }
+.item { --focus-outline-offset: -2px; position: relative; display: flex; width: 100%; min-width: 0; height: var(--ss-row); align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 10px 0 12px; background: transparent; color: var(--text-secondary); text-align: left; cursor: pointer; }
+.item > :not(.itemActive) { position: relative; z-index: 1; }
+.item:active { background: var(--ss-hover); color: var(--foreground); }
+.item[aria-current] { color: var(--foreground); }
+/* One calm full-row fill marks the open page and glides between rows; the icon takes the accent. */
+.itemActive { position: absolute; z-index: 0; inset: 0; border-radius: inherit; background: var(--ss-active); }
+.itemMarker { display: grid; width: 16px; height: 16px; flex: none; place-items: center; }
+.itemIcon { color: var(--text-muted); }
+.item[aria-current] .itemIcon { color: var(--accent); }
+/* A section item's tone colours its icon (or the quiet # glyph drawn when it has none): no coloured dots or blobs. */
+.itemIcon[data-tone], .item:is(:hover, [aria-current]) .itemIcon[data-tone] { color: var(--ss-tone) !important; }
+.itemAvatar { width: 16px; height: 16px; border-radius: var(--radius-pill); box-shadow: 0 0 0 1px var(--border); object-fit: cover; }
+.itemLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.itemCount { flex: none; color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.item[aria-current] .itemCount { color: var(--text-secondary); }
+.itemUnread { width: 6px; height: 6px; flex: none; margin-right: 2px; border-radius: var(--radius-pill); background: var(--accent); }
+.noResults { margin: 0; padding: 8px 12px; color: var(--text-muted); font-size: var(--text-xs); }
+
+/* Section headings sit on the bottom of a 32px box in --text-xs medium, like the workspace-sidebar block. */
+.section { min-width: 0; margin-top: 8px; transition: opacity var(--duration-fast) var(--ease-standard), visibility 0s linear 0s; }
+.section[data-hidden]:not([data-icon]) { opacity: 0; visibility: hidden; transition: opacity var(--duration-fast) var(--ease-standard), visibility 0s linear var(--duration-fast); }
+.sectionHead { display: flex; height: 32px; align-items: flex-end; gap: 4px; padding: 0 4px 4px 12px; }
+.sectionToggle, .sectionLabel { display: inline-flex; min-width: 0; height: 22px; align-items: center; gap: 4px; border: 0; border-radius: 6px; margin-left: -4px; padding: 0 4px; background: transparent; color: var(--text-muted); font-size: var(--text-xs); font-weight: 500; white-space: nowrap; }
+.sectionToggle { --focus-outline-offset: -2px; cursor: pointer; }
+.sectionIcon { flex: none; margin-right: 6px; color: var(--text-muted); }
+.sectionText { overflow: hidden; text-overflow: ellipsis; }
+.sectionChevron { flex: none; opacity: 0; transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
+.sectionChevron[data-open] { transform: rotate(90deg); }
+.sectionToggle:focus-visible .sectionChevron, .sectionToggle[aria-expanded="false"] .sectionChevron { opacity: 1; }
+.sectionAction { --focus-outline-offset: -2px; display: grid; width: 22px; height: 22px; flex: none; place-items: center; margin-left: auto; border: 0; border-radius: 6px; padding: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.sectionAction:active { background: var(--ss-active); color: var(--foreground); }
+.sectionBody { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; overflow: hidden; }
+/* Custom section content keeps the full sidebar width, so a calendar or a tree never reflows while the rail morphs. */
+.sectionContent { width: 232px; min-width: 0; }
+/* A section with an icon keeps it in the rail on the icon axis: the heading becomes a 32px row that expands the sidebar. */
+.section[data-icon] .sectionHead { transition: height var(--duration-standard) var(--ease-standard), padding var(--duration-standard) var(--ease-standard); }
+.section[data-icon] :is(.sectionText, .sectionChevron, .sectionAction, .sectionBody) { transition: opacity var(--duration-fast) var(--ease-standard), visibility 0s linear 0s, transform var(--duration-fast) var(--ease-standard); }
+.section[data-icon][data-hidden] :is(.sectionText, .sectionChevron, .sectionAction, .sectionBody) { opacity: 0; visibility: hidden; transition: opacity var(--duration-fast) var(--ease-standard), visibility 0s linear var(--duration-fast); }
+.section[data-icon][data-hidden] .sectionToggle, .section[data-icon][data-hidden] .sectionLabel { width: 40px; height: var(--ss-row); margin-left: -12px; overflow: hidden; padding: 0 0 0 12px; border-radius: 8px; color: var(--text-muted); cursor: pointer; }
+.section[data-icon][data-hidden] .sectionHead { height: var(--ss-row); padding-bottom: 0; align-items: center; }
+
+/* Rail: labels, counts and the collapse button fade while the width morphs. */
+.workspaceName, .workspaceChevron, .topToggle, .searchPlaceholder, .kbd, .itemLabel, .itemCount, .itemUnread, .accountText, .accountChevron { transition: opacity var(--duration-fast) var(--ease-standard); }
+.root[data-collapsed] :is(.workspaceName, .workspaceChevron, .topToggle, .searchPlaceholder, .kbd, .itemLabel, .itemCount, .itemUnread, .accountText, .accountChevron) { opacity: 0; }
+.root[data-collapsed] .topToggle { pointer-events: none; }
+
+.bottom { display: grid; flex: none; grid-template-columns: minmax(0, 1fr); padding-top: 8px; }
+.cards { overflow: hidden; }
+.cardsInner { display: grid; grid-template-columns: minmax(0, 1fr); padding-bottom: 8px; }
+.cardFold { overflow: hidden; }
+.cardFold > .card { margin-bottom: 8px; }
+.card { display: grid; width: 100%; min-width: 0; gap: 4px; border: 1px solid var(--ss-line); border-radius: 10px; padding: 12px; background: var(--ss-raised); color: inherit; text-align: left; }
+.cardButton { --focus-outline-offset: -2px; cursor: pointer; }
+.cardButton:active { border-color: var(--border-strong); }
+.cardRow { display: flex; min-width: 0; align-items: center; gap: 6px; }
+.cardTitle { display: inline-flex; min-width: 0; flex: 1; align-items: center; gap: 8px; overflow: hidden; font-size: var(--text-sm); font-weight: 500; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.cardDot { width: 6px; height: 6px; flex: none; border-radius: var(--radius-pill); background: var(--accent); }
+.cardArrow { flex: none; color: var(--text-muted); }
+.cardBody { color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); font-variant-numeric: tabular-nums; }
+.cardLink { --focus-outline-offset: 1px; display: inline-flex; width: fit-content; align-items: center; gap: 2px; margin-top: 4px; border: 0; border-radius: 4px; padding: 0; background: transparent; color: var(--text-secondary); font-size: var(--text-xs); font-weight: 500; cursor: pointer; }
+.cardClose { --focus-outline-offset: -2px; display: grid; width: 22px; height: 22px; flex: none; place-items: center; margin: -4px -6px -4px 0; border: 0; border-radius: 6px; padding: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.cardClose:active { background: var(--ss-active); color: var(--foreground); }
+/* The bar is the workspace-sidebar storage meter: a 4px pill track on --border with an accent fill. */
+.bar { display: block; height: 4px; margin-top: 8px; overflow: hidden; border-radius: var(--radius-pill); background: var(--border); }
+.barFill { display: block; height: 100%; border-radius: inherit; background: var(--accent); transform-origin: 0 50%; }
+
+/* The account row matches the workspace-sidebar user row: 44px, a 28px Arc avatar, name and a quiet second line. */
+.account { --focus-outline-offset: -2px; display: flex; width: 100%; min-width: 0; height: 44px; align-items: center; gap: 10px; border: 0; border-radius: 10px; padding: 0 6px; background: transparent; color: var(--foreground); text-align: left; cursor: pointer; }
+.account:not([data-static]):active, .account[data-open] { background: var(--ss-active); }
+.account[data-static] { cursor: default; }
+.accountText { display: grid; min-width: 0; flex: 1; }
+.accountName, .accountDetail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.accountName { font-weight: 500; line-height: 1.35; }
+.accountDetail { color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); }
+.accountChevron { flex: none; color: var(--text-muted); }
+.avatar { overflow: hidden; }
+
+/* ------------------------------------------------------------------ Main */
+
+.body { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.root[data-variant="inset"] .body { padding: 8px 8px 8px 0; }
+.main { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--ss-main); container: screen-main / inline-size; }
+.root[data-variant="inset"] .main { border: 1px solid var(--ss-line); border-radius: 12px; box-shadow: var(--shadow-resting); }
+
+.header { flex: none; border-bottom: 1px solid var(--border-subtle); font-size: var(--text-sm); }
+.headerRow { display: flex; height: 52px; min-width: 0; align-items: center; gap: 8px; padding: 0 12px 0 20px; }
+.crumbs { display: flex; flex: 1; min-width: 0; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; }
+.crumb { display: inline-flex; min-width: 0; flex: 0 1 auto; align-items: center; gap: 6px; }
+.crumbButton, .crumbText { min-width: 0; overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; }
+.crumbButton { --focus-outline-offset: -2px; border: 0; border-radius: 6px; margin: 0 -6px; padding: 4px 6px; background: transparent; cursor: pointer; }
+.crumbButton:active { background: var(--ss-active); color: var(--foreground); }
+.crumbSep { flex: none; color: var(--text-muted); opacity: .7; }
+.title { min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; }
+.meta { flex: none; color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.headerActions { display: flex; flex: none; align-items: center; gap: 8px; margin-left: auto; }
+.headerBelow { padding: 0 20px; }
+
+.compactBar { display: none; height: 52px; flex: none; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-subtle); padding: 0 12px; font-size: var(--text-sm); }
+.compactName { overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Icon buttons follow the workspace-sidebar toggle: 32px, 8px radius, text-secondary, an instant fill. They squeeze to 0.97;
+ * the menu triggers (workspace, account) answer with colour only because they anchor a floating layer. */
+.iconButton { --focus-outline-offset: -2px; display: inline-grid; width: 32px; height: 32px; flex: none; place-items: center; border: 0; border-radius: 8px; padding: 0; background: transparent; color: var(--text-secondary); cursor: pointer; transition: transform var(--duration-instant) var(--ease-standard); }
+.iconButton[aria-pressed="true"], .iconButton:active { background: var(--ss-active); color: var(--foreground); }
+.iconButton:active { transform: scale(.97); }
+.menuButton { display: none; margin-left: -6px; }
+
+/* ScreenShellButton: Arc's Button tokens (variants, hover, press, disabled) at the shell's 32px header height. */
+.button { --focus-outline-offset: 2px; display: inline-flex; height: 32px; flex: none; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 8px; padding: 0 12px; font-size: var(--text-sm); font-weight: 500; line-height: var(--leading-body); white-space: nowrap; cursor: pointer; }
+.button > svg { flex: none; }
+.button[data-variant="primary"] { border-color: var(--foreground); background: var(--foreground); color: var(--background); }
+.button[data-variant="secondary"] { border-color: var(--ss-line); background: var(--ss-raised); color: var(--foreground); }
+.button[data-variant="ghost"] { background: transparent; color: var(--text-secondary); }
+.button[data-variant="primary"]:active:not(:disabled) { opacity: .84; }
+.button:is([data-variant="secondary"], [data-variant="ghost"]):active:not(:disabled) { background: var(--surface-muted); color: var(--foreground); }
+.button:disabled { cursor: not-allowed; }
+.button[data-variant="primary"]:disabled { opacity: .52; }
+.button[data-variant="secondary"]:disabled { background: var(--surface-muted); color: var(--text-muted); }
+.button[data-variant="ghost"]:disabled { color: var(--text-muted); }
+.buttonIcon { width: 32px; padding: 0; }
+
+.scroll { --ft: 0px; --fb: 0px; position: relative; flex: 1; min-height: 0; overflow: auto; scrollbar-width: none; overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%); }
+.content { display: flow-root; min-height: 100%; padding: 24px 28px 40px; }
+.scroll[data-padding="none"] .content { padding: 0; }
+.static { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; padding: 24px 28px; }
+.static[data-padding="none"] { padding: 0; }
+
+/* ------------------------------------------------------------------ Right panel */
+
+.panel { position: relative; display: flex; flex: none; height: 100%; min-width: 0; overflow: hidden; background: var(--ss-main); }
+.root[data-variant="inset"] .panel { border: 1px solid var(--ss-line); border-radius: 12px; box-shadow: var(--shadow-resting); }
+.root[data-variant="flat"] .panel { border-left: 1px solid var(--ss-line); }
+.panelInner { width: var(--ss-panel-w); min-width: 0; height: 100%; flex: none; overflow-y: auto; scrollbar-width: none; }
+.handle { --focus-outline-offset: -2px; position: absolute; z-index: 2; top: 0; bottom: 0; left: 0; width: 7px; cursor: col-resize; touch-action: none; }
+.handle::after { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: transparent; content: ""; }
+.root[data-resizing] .handle::after { background: var(--border-strong); }
+
+/* Below 1080px the panel is a sheet from the right, opened from the header. */
+.panel[data-sheet] { position: absolute; z-index: 6; top: 8px; right: 8px; bottom: 8px; display: flex; width: min(380px, calc(100% - 16px)); height: auto; flex-direction: column; border: 1px solid var(--ss-line); border-radius: 12px; background: var(--ss-main); box-shadow: var(--shadow-floating); visibility: hidden; transform: translateX(calc(100% + 16px)); transition: transform var(--duration-standard) var(--ease-standard), visibility 0s linear var(--duration-standard); }
+.root[data-panel-sheet] .panel[data-sheet] { visibility: visible; transform: none; transition: transform var(--duration-standard) var(--ease-enter), visibility 0s; }
+.panel[data-sheet] .panelInner { width: 100%; flex: 1; min-height: 0; }
+.panelSheetTop { position: absolute; z-index: 2; top: 10px; right: 10px; }
+
+/* The scrim matches the workspace-sidebar drawer backdrop. */
+.scrim { position: absolute; z-index: 5; inset: 0; background: color-mix(in oklab, #000 28%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-standard) var(--ease-standard); }
+:global(:root[data-theme="dark"]) .scrim { background: color-mix(in oklab, #000 52%, transparent); }
+.root[data-panel-sheet] .scrim[data-for="panel"] { opacity: 1; pointer-events: auto; }
+
+/* ------------------------------------------------------------------ Floating parts */
+
+/* Rail labels use the Arc tooltip look as the workspace-sidebar rail does: inverted, --radius-control, --text-sm medium, a hairline
+ * edge and the raised shadow. It rises from the rail edge in 150ms and can carry a key cap. */
+.tip { position: absolute; z-index: 20; display: flex; align-items: center; gap: 8px; border: 1px solid color-mix(in oklab, var(--background) 14%, var(--foreground)); border-radius: var(--radius-control); padding: 6px 12px; background: var(--foreground); color: var(--background); font-size: var(--text-sm); font-weight: 500; line-height: var(--leading-body); white-space: nowrap; pointer-events: none; transform: translateY(-50%); box-shadow: var(--shadow-raised); transition: opacity var(--duration-fast) var(--ease-enter), transform var(--duration-fast) var(--ease-enter); }
+@starting-style { .tip { opacity: 0; transform: translate(-4px, -50%); } }
+.tipKey { display: inline-grid; min-width: 20px; height: 20px; place-items: center; border: 1px solid color-mix(in oklab, var(--background) 30%, var(--foreground)); border-radius: 6px; padding: 0 5px; font-family: var(--font-body); font-size: var(--text-xs); font-weight: 400; line-height: 1; }
+
+/* Menus take the dropdown-menu tokens inside the shell's proportions, as the workspace-sidebar menu does: --surface-raised, a
+ * hairline border, the floating shadow, --text-sm items with a --surface-muted highlight and a faint danger tint. */
+.menu { position: absolute; z-index: 30; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-raised); box-shadow: var(--shadow-floating); color: var(--foreground); font-size: var(--text-sm); }
+.menuGroup { display: grid; gap: 1px; }
+.menuGroup[data-separated] { margin-top: 4px; border-top: 1px solid var(--border-subtle); padding-top: 4px; }
+.menuItem { display: flex; width: 100%; min-width: 0; min-height: 36px; align-items: center; gap: 10px; border: 0; border-radius: 10px; padding: 0 10px; background: transparent; color: var(--foreground); text-align: left; cursor: pointer; outline: none; }
+.menuItem[data-tall] { min-height: 44px; padding-left: 8px; }
+.menuItem:focus-visible, .menuItem:active { background: var(--surface-muted); }
+.menuItem[data-danger] { color: var(--danger); }
+.menuItem[data-danger]:focus-visible, .menuItem[data-danger]:active { background: color-mix(in oklab, var(--danger) 8%, var(--surface)); }
+.menuIcon { flex: none; color: var(--text-secondary); }
+.menuItem[data-danger] .menuIcon { color: inherit; }
+.menuText { display: grid; min-width: 0; flex: 1; }
+.menuLabel { min-width: 0; flex: 1; overflow: hidden; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.menuText > .menuLabel { font-weight: 500; }
+.menuDetail { overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); text-overflow: ellipsis; white-space: nowrap; }
+.menuShortcut { flex: none; color: var(--text-muted); font-family: inherit; font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.menuCheck { flex: none; color: var(--foreground); }
+.menuHead { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--border-subtle); padding: 6px 8px 10px; }
+.menuEmpty { margin: 0; padding: 8px 10px; color: var(--text-muted); }
+
+/* ------------------------------------------------------------------ Hover (pointer only, instant) */
+
+@media (hover: hover) and (pointer: fine) {
+  .workspace:hover { background: var(--ss-hover); }
+  .workspace:hover .workspaceChevron { color: var(--foreground); }
+  .root[data-collapsed] .workspace:hover .workspaceLogo { opacity: 0; }
+  .root[data-collapsed] .workspace:hover .railExpand { opacity: 1; }
+  button.search:hover, .search:hover:not(:focus-within) { border-color: var(--border-strong); }
+  .searchClear:hover { background: var(--ss-hover); color: var(--foreground); }
+  .item:hover { background: var(--ss-hover); color: var(--foreground); }
+  .item:hover .itemIcon { color: var(--text-secondary); }
+  .item[aria-current]:hover { background: transparent; }
+  .item[aria-current]:hover .itemIcon { color: var(--accent); }
+  .sectionHead:hover .sectionChevron { opacity: 1; }
+  .sectionToggle:hover { color: var(--text-secondary); }
+  .section[data-icon][data-hidden] .sectionToggle:hover { background: var(--ss-hover); color: var(--foreground); }
+  .section[data-icon][data-hidden] .sectionToggle:hover .sectionIcon { color: var(--text-secondary); }
+  .sectionAction:hover { background: var(--ss-hover); color: var(--foreground); }
+  .cardButton:hover { border-color: var(--border-strong); }
+  .cardLink:hover { color: var(--foreground); }
+  .cardClose:hover { background: var(--ss-hover); color: var(--foreground); }
+  .account:not([data-static]):hover { background: var(--ss-hover); }
+  .crumbButton:hover { background: var(--ss-hover); color: var(--foreground); }
+  .iconButton:hover { background: var(--ss-hover); color: var(--foreground); }
+  .button[data-variant="primary"]:hover:not(:disabled) { opacity: .91; box-shadow: var(--shadow-resting); }
+  .button[data-variant="secondary"]:hover:not(:disabled) { background: var(--surface-muted); box-shadow: var(--shadow-resting); }
+  .button[data-variant="ghost"]:hover:not(:disabled) { background: var(--surface-muted); color: var(--foreground); }
+  .handle:hover::after { background: var(--border-strong); }
+  .menuItem:hover { background: var(--surface-muted); }
+  .menuItem[data-danger]:hover { background: color-mix(in oklab, var(--danger) 8%, var(--surface)); }
+}
+/* Keep the pressed and open fills above the hover fill. */
+.workspace[data-open], .account[data-open] { background: var(--ss-active); }
+
+/* ------------------------------------------------------------------ Narrow frames */
+
+/* Below 900px the sidebar is a sheet opened from the menu button. */
+@container screen-shell (max-width: 899px) {
+  .sidebar { position: absolute; z-index: 8; top: 0; bottom: 0; left: 0; width: min(288px, calc(100% - 40px)) !important; border-right: 1px solid var(--ss-line); visibility: hidden; transform: translateX(-100%); transition: transform var(--duration-standard) var(--ease-standard), visibility 0s linear var(--duration-standard), box-shadow var(--duration-standard) var(--ease-standard); }
+  .root[data-sheet] .sidebar { visibility: visible; transform: none; box-shadow: var(--shadow-floating); transition: transform var(--duration-standard) var(--ease-enter), visibility 0s, box-shadow var(--duration-standard) var(--ease-standard); }
+  .root[data-sheet] .scrim[data-for="sidebar"] { z-index: 7; opacity: 1; pointer-events: auto; }
+  .root[data-variant="inset"] .body { padding: 6px; }
+  .foldInner, .sectionContent { width: auto; }
+  .menuButton { display: inline-grid; }
+  .compactBar { display: flex; }
+  .headerRow { padding-left: 12px; }
+}
+
+/* Phone widths: the page goes edge to edge and the trail keeps only the current page. */
+@container screen-shell (max-width: 599px) {
+  .root[data-variant="inset"] .body { padding: 0; }
+  .root[data-variant="inset"] .main { border: 0; border-radius: 0; box-shadow: none; }
+  .headerRow { height: 48px; padding-right: 8px; }
+  .crumb { display: none; }
+  .meta { display: none; }
+  .content { padding: 16px 16px 32px; }
+  .static { padding: 16px; }
+  .root[data-variant] .panel[data-sheet] { top: 0; right: 0; bottom: 0; width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+}
+
+/* Touch: rows, the search field and icon buttons grow to a 40px target, as in the workspace-sidebar block. */
+@media (pointer: coarse) {
+  .root { --ss-row: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root *, .root *::before, .root *::after { transition-duration: 0s !important; transition-delay: 0s !important; }
+  @starting-style { .tip { transform: translateY(-50%); } }
+}
