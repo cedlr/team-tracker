@@ -18,7 +18,7 @@ export async function updateProfile(input: unknown) {
   const { member } = await requireViewer();
   const record = await getMemberRecord(member.id);
   if (!record) return { ok: false as const, error: "Account not found." };
-  await saveMember({ ...record, name: parsed.data.name, title: parsed.data.title, location: parsed.data.location || undefined, website: parsed.data.website || undefined, bio: parsed.data.bio || undefined });
+  await saveMember({ ...record, name: parsed.data.name, title: parsed.data.title, website: parsed.data.website || undefined, bio: parsed.data.bio || undefined });
   revalidatePath("/", "layout");
   return { ok: true as const };
 }
@@ -39,7 +39,7 @@ export async function changePassword(input: unknown) {
 export async function inviteMember(input: unknown) {
   const parsed = inviteInput.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Invalid invite" };
-  const { member, team, isLead } = await requireViewer();
+  const { team, isLead } = await requireViewer();
   if (!isLead) return { ok: false as const, error: "Only team leads can add members." };
   const email = parsed.data.email.toLowerCase();
   const existing = await getMemberForLogin(email);
@@ -56,7 +56,7 @@ export async function inviteMember(input: unknown) {
   const name = parsed.data.name?.trim() || titleCase(email.split("@")[0]) || email;
   await saveMember({
     id, name, email, passwordHash: await bcrypt.hash(password, 10), title: "", department: "Engineering",
-    weeklyCapacityHours: 40, started: zonedISODate(), isAdmin: false, managerId: member.id,
+    weeklyCapacityHours: 40, started: zonedISODate(), isAdmin: false,
     memberships: [{ teamId: team.id, allocation: 1, role: parsed.data.role }],
   });
   revalidatePath("/", "layout");

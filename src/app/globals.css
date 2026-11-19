@@ -11,3 +11,33 @@ body { background: var(--background); color: var(--foreground); font-family: var
 .tt-project { height: 100dvh; overflow: auto; }
 .tt-project-board { height: 100dvh; }
 .tt-project-breakdown { padding: 24px; max-width: 960px; }
+
+/* Page rhythm for composed screens: one column of Arc items with even gaps, KPI rows that wrap, panels on the surface token. */
+.tt-page { display: grid; gap: var(--space-6, 24px); padding-block-end: var(--space-8, 32px); min-width: 0; }
+.tt-page > * { min-width: 0; }
+.tt-kpis { display: grid; gap: var(--space-4, 16px); grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); }
+.tt-split { display: grid; gap: var(--space-4, 16px); grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); }
+.tt-panel { background: var(--surface, var(--background)); border: 1px solid var(--border); border-radius: var(--radius-panel, 20px); padding: var(--space-5, 20px); min-width: 0; overflow: hidden; }
+.tt-panel-center { display: grid; place-items: center; }
+.tt-form-row { display: flex; flex-wrap: wrap; gap: var(--space-3, 12px); align-items: flex-end; }
+.tt-grow { flex: 1 1 320px; min-width: 0; }
+.tt-narrow { flex: 0 1 140px; }
+.tt-note { margin: var(--space-3, 12px) 0 0; color: var(--text-secondary); font-size: var(--text-sm, 14px); }
+.tt-row-end { justify-content: flex-end; flex-wrap: nowrap; }
+@media (max-width: 760px) { .tt-split { grid-template-columns: 1fr; } }
+.tt-section-title { margin: 0 0 var(--space-4, 16px); font-family: var(--font-geist), var(--font-inter), sans-serif; font-size: var(--text-base, 15px); font-weight: 600; }
+.tt-person { display: inline-flex; align-items: center; gap: var(--space-3, 12px); color: inherit; text-decoration: none; min-width: 0; }
+.tt-person:hover .tt-person-name { text-decoration: underline; text-underline-offset: 3px; }
+.tt-person-text { display: grid; gap: 2px; min-width: 0; }
+.tt-person-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-person-title { font-family: var(--font-geist), var(--font-inter), sans-serif; font-size: var(--text-xl, 20px); font-weight: 600; }
+.tt-person-meta { color: var(--text-secondary); font-size: var(--text-sm, 13px); }
+.tt-person-head { display: flex; align-items: center; gap: var(--space-5, 20px); }
+.tt-person-head .tt-row { gap: var(--space-2, 8px); margin-top: var(--space-2, 8px); }
+.tt-link { color: inherit; text-decoration: none; }
+.tt-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tt-activity { min-width: 0; }
+.tt-activity > * { max-width: none; width: 100%; margin-inline: 0; }
+.tt-clip { display: block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-split-even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .tt-split-even { grid-template-columns: 1fr; } }

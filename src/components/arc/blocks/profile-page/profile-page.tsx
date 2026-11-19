@@ -49,7 +49,7 @@ export interface ProfilePageProps {
 }
 
 type EditableField = "name" | "headline" | "location" | "website" | "bio";
-const fields: EditableField[] = ["name", "headline", "location", "website", "bio"];
+const fields: EditableField[] = ["name", "headline", "website", "bio"]; // team-tracker: no location
 const bioLimit = 200;
 const number = new Intl.NumberFormat("en-US");
 const easeEnter = [...motionTokens.ease.enter] as [number, number, number, number];
@@ -311,7 +311,6 @@ function EditSheet({ initial, reduced, onClose, onSave }: { initial: ProfileDeta
         <Field id={`${fieldId}-name`} label="Name" error={touched ? nameError : undefined}><input ref={first} id={`${fieldId}-name`} value={draft.name} onChange={set("name")} autoComplete="name" aria-invalid={touched && !!nameError} aria-describedby={touched && nameError ? `${fieldId}-name-error` : undefined} /></Field>
         <Field id={`${fieldId}-headline`} label="Headline"><input id={`${fieldId}-headline`} value={draft.headline} onChange={set("headline")} /></Field>
         <div className={styles.pair}>
-          <Field id={`${fieldId}-location`} label="Location"><input id={`${fieldId}-location`} value={draft.location} onChange={set("location")} /></Field>
           <Field id={`${fieldId}-website`} label="Website" error={touched ? websiteError : undefined}><input id={`${fieldId}-website`} value={draft.website} onChange={set("website")} inputMode="url" aria-invalid={touched && !!websiteError} aria-describedby={touched && websiteError ? `${fieldId}-website-error` : undefined} /></Field>
         </div>
         <Field id={`${fieldId}-bio`} label="Bio" hint={`${bioLimit - draft.bio.length} left`}><textarea id={`${fieldId}-bio`} value={draft.bio} onChange={set("bio")} rows={5} /></Field>

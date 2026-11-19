@@ -68,15 +68,16 @@ Utilization = hours logged on the team's tasks รท (capacity share for the team โ
 | --- | --- |
 | `/login` | `login-split` (email + password, wired to Auth.js) |
 | shared frame | `screen-shell` with one nav config (`src/components/app/nav.ts`), team switcher, account menu, daily check-in button |
-| `/` | `metric-card`, `bar-chart`, `activity-heatmap`, `activity-feed` (recent task, leave and check-in events) |
+| `/` | `metric-card`, `donut-chart` (tasks by status), `bar-chart` (open tasks by project, hours logged), `empty-state`, `activity-heatmap`, `activity-feed` |
 | `/tasks` | `kanban-board` (create, edit and move saved) |
 | `/projects` | `sortable-data-table`, `progress`, `badge` |
 | `/projects/[id]` | `kanban-board` scoped to the project, then `task-breakdown` of that project's tasks |
 | `/timeline` | `gantt-timeline` (real members; drag to reschedule saves dates) |
 | `/calendar` | `month-calendar` (leave, task deadlines, holidays; create and delete persist) |
-| `/people` | `team-directory` (real members, Kuala Lumpur clocks, today's date) |
-| `/leave` | `team-directory` leave page (records only; approvals happen by email) + `dialog`, `date-range-picker`, `select`, `textarea` "Add leave" form for leads/admins |
-| `/utilization` | `bar-chart`, `sortable-data-table`, `usage-meter`, `segmented-control`, plus an hours log on a task |
+| `/people` | `metric-card` + `sortable-data-table` with `avatar`, `badge`, `progress`: role, projects, tasks by status, overdue, utilization, check-ins, leave |
+| `/people/[id]` | Work profile: `metric-card`, `gauge` (utilization), `donut-chart` (tasks by status), current tasks and upcoming leave in `sortable-data-table` |
+| `/leave` | Leave records (approvals happen by email): `metric-card`, `sortable-data-table`, `empty-state`, plus the `dialog` / `date-range-picker` / `select` "Add leave" form for leads and admins |
+| `/utilization` | `metric-card`, `gauge`, `split-bar` (Pro), `line-chart` (logged vs available per day), `bar-chart` (per person), `sortable-data-table`, `empty-state`, `segmented-control`, plus an hours log on a task |
 | `/settings` | `profile-page` (edit saves), password change, rename/add team, `roles-permissions` (roles save), `invite-people` (new member + temporary password) |
 
 Alignment edits to Arc source are marked `team-tracker:` (login-split props, screen-shell app provider).

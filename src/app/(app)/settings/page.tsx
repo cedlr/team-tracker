@@ -26,7 +26,7 @@ export default async function SettingsPage() {
     }))}
     grants={team.grants}
     profile={{
-      name: member.name, handle: member.email.split("@")[0], headline: member.title, location: member.location || "Kuala Lumpur", website: member.website || "", bio: member.bio || "",
+      name: member.name, handle: member.email.split("@")[0], headline: member.title, location: "", website: member.website || "", bio: member.bio || "",
       avatar: avatarSrc(member.avatar), cover: photos.find(p => p.id === "mountain-ridges")?.src, joined: format(new Date(`${member.started}T00:00:00`), "MMMM yyyy"),
     }}
     stats={[

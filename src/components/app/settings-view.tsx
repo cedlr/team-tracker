@@ -65,7 +65,7 @@ export function SettingsView({
           defaultTab="projects"
           editable
           onSave={async next => {
-            const result = await updateProfile({ name: next.name, title: next.headline, location: next.location, website: next.website, bio: next.bio });
+            const result = await updateProfile({ name: next.name, title: next.headline, website: next.website, bio: next.bio });
             if (!result.ok) throw new Error(result.error);
             router.refresh();
           }}
@@ -95,7 +95,7 @@ export function SettingsView({
         {message && <p role="status">{message}</p>}
         {error && <p role="alert">{error}</p>}
         {isLead && <RolesPermissions
-          key={teamId}
+          key={`roles-${teamId}`}
           workspace={teamName}
           members={members}
           grants={grants}
@@ -103,7 +103,7 @@ export function SettingsView({
           onSave={next => saveRoleGrants(next)}
         />}
         {isLead && <InvitePeople
-          key={teamId}
+          key={`invite-${teamId}`}
           directory={[]}
           team={roster}
           roles={inviteRoles}

@@ -66,6 +66,8 @@ export interface KanbanBoardProps {
   today?: string;
   /** The running cycle shown at the foot of the sidebar and in the details panel. Its dates use the same "Nov 12" form. */
   cycle?: { name: string; start: string; end: string };
+  /** team-tracker: the first view, such as "all" or "my". Defaults to the default (or first) project. */
+  defaultView?: string;
   /** Seeded history for the details panel, by card id. */
   activity?: Record<string, KanbanActivity[]>;
   className?: string;
@@ -308,6 +310,7 @@ export function KanbanBoard({
   projects: projectsProp = sampleProjects,
   labels: labelList = sampleLabels,
   defaultProject,
+  defaultView,
   workspace = "Larkspur",
   today = "Nov 12",
   cycle = DEFAULT_CYCLE,
@@ -326,7 +329,7 @@ export function KanbanBoard({
   const [extraProjects, setExtraProjects] = useState<KanbanProject[]>([]);
   const projects = useMemo(() => [...projectsProp.map((project, index) => index === 0 && title ? { ...project, name: title } : project), ...extraProjects], [projectsProp, extraProjects, title]);
   const firstProject = projects[0]?.id ?? "";
-  const [view, setViewState] = useState(`p-${defaultProject ?? firstProject}`);
+  const [view, setViewState] = useState(defaultView ?? `p-${defaultProject ?? firstProject}`);
   const [workspaceId, setWorkspaceId] = useState("main");
   const [groupBy, setGroupBy] = useState<KanbanGroupBy>(defaultGroupBy);
   const [filters, setFiltersState] = useState<Filters>(EMPTY_FILTERS);

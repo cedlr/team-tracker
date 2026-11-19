@@ -55,6 +55,11 @@ export default async function DashboardPage() {
     checkIns,
     checkInPeriod: "the last 90 days",
     today,
+    statusCounts: (["backlog", "todo", "progress", "review", "done"] as const).map(status => ({
+      key: status, label: { backlog: "Backlog", todo: "To do", progress: "In progress", review: "In review", done: "Done" }[status], value: tasks.filter(t => t.status === status).length,
+    })),
+    projectOpen: projects.map(p => ({ key: p.id, label: p.name, axisLabel: p.key, value: tasks.filter(t => t.projectId === p.id && t.status !== "done").length }))
+      .filter(p => p.value > 0).sort((a, b) => b.value - a.value),
     activity: teamActivity({ today, teamId: team.id, teamName: team.name, members, projects, tasks, leaves, attendance, avatarOf: member => avatarSrc(member.avatar) }),
   }} />;
 }

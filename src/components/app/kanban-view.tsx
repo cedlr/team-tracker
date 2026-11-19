@@ -11,8 +11,8 @@ import { fromShort, toShort } from "./dates";
 const columns: KanbanColumn[] = [
   { id: "backlog", name: "Backlog", kind: "backlog" },
   { id: "todo", name: "Todo", kind: "unstarted" },
-  { id: "progress", name: "In progress", limit: 6, kind: "started" },
-  { id: "review", name: "In review", limit: 4, kind: "review" },
+  { id: "progress", name: "In progress", kind: "started" },
+  { id: "review", name: "In review", kind: "review" },
   { id: "done", name: "Done", kind: "done" },
 ];
 
@@ -28,7 +28,7 @@ export interface KanbanViewProps {
 
 const toCard = (task: Task): KanbanCard => ({
   id: task.id, title: task.title, column: task.status, assignee: task.assigneeId ?? "", priority: task.priority,
-  project: task.projectId, due: toShort(task.due), points: task.points, description: task.description,
+  project: task.projectId, due: toShort(task.due), points: task.points ?? (task.estimateHours ? Math.round(task.estimateHours / 8) : undefined), description: task.description,
 });
 const sameEdit = (a: KanbanCard, b: KanbanCard) =>
   a.title === b.title && a.assignee === b.assignee && a.priority === b.priority && a.due === b.due && a.points === b.points && a.description === b.description && a.project === b.project;
@@ -39,7 +39,7 @@ export function KanbanView({ tasks, projects, people, currentUser, teamName, def
   const initial = useMemo(() => tasks.map(toCard), [tasks]);
   const saved = useRef(new Map(initial.map((card, index) => [card.id, { card, order: index }])));
   const timer = useRef<number | undefined>(undefined);
-  const kanbanProjects: KanbanProject[] = projects.map(p => ({ id: p.id, name: p.name, key: p.key, tone: p.tone, icon: FolderKanban }));
+  const kanbanProjects: KanbanProject[] = [...projects].sort((a, b) => Number(a.id === "general") - Number(b.id === "general")).map(p => ({ id: p.id, name: p.name, key: p.key, tone: p.tone, icon: FolderKanban }));
 
   function persist(cards: KanbanCard[]) {
     window.clearTimeout(timer.current);
@@ -76,6 +76,7 @@ export function KanbanView({ tasks, projects, people, currentUser, teamName, def
         projects={kanbanProjects}
         labels={[]}
         defaultProject={defaultProject}
+        defaultView={defaultProject ? undefined : "all"}
         workspace={teamName}
         today={toShort(new Date().toISOString().slice(0, 10))}
         cycle={cycle}

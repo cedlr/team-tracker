@@ -3,7 +3,7 @@ import { z } from "zod";
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
 
 export const toneSchema = z.enum(["teal", "sky", "orchid", "violet", "rose", "amber", "green"]);
-/** Arc's team-directory groups people by these departments. */
+/** Department shown with a person. */
 export const departmentSchema = z.enum(["Design", "Engineering", "Go-to-market", "Operations"]);
 
 export const teamSchema = z.object({
@@ -33,9 +33,7 @@ export const memberSchema = z.object({
   /** Arc sample portrait id (lib/media people), or an image URL. */
   avatar: z.string().optional(),
   weeklyCapacityHours: z.number().min(0).max(80).default(40),
-  managerId: z.string().optional(),
   started: isoDate,
-  location: z.string().max(80).optional(),
   website: z.string().max(120).optional(),
   bio: z.string().max(200).optional(),
   isAdmin: z.boolean().default(false),
@@ -155,7 +153,6 @@ export type CalendarEventRecord = z.infer<typeof calendarEventSchema>;
 export const profileInput = z.object({
   name: z.string().trim().min(1).max(80),
   title: z.string().trim().max(80),
-  location: z.string().trim().max(80).optional(),
   website: z.string().trim().max(120).optional(),
   bio: z.string().trim().max(200).optional(),
 });
